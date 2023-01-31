@@ -25,13 +25,37 @@ class Review(models.Model):
         related_name='reviews',
         verbose_name='Author'
     )
-    text = models.TimeField()
+    text = models.TextField()
     score = models.IntegerField(
         verbose_name='Evaluation'
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='date of publication'
+        verbose_name='Date of publication'
     )
     def __str__(self):
         return self.text
+
+
+# id,review_id,text,author,pub_date
+class Comment(models.Model):
+    review = models.ForeignKey(
+        'Review',
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Feedback'
+    )
+    text = models.TextField()
+    author = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Author'
+    )
+    pub_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Date of publication'
+    )
+    def __str__(self):
+        return self.text
+    

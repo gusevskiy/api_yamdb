@@ -18,5 +18,6 @@ class User(AbstractUser):
     )
     bio = models.TextField(
         'bio',
-        max_length=256
+        max_length=256,
+        blank=True
     )

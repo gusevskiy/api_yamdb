@@ -3,10 +3,10 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models.query import QuerySet"""
 
-from reviews.models import Genre
-from .serializers import GenreSerializer
+from reviews.models import Genre, User
+from .serializers import GenreSerializer, UserSerializer
 from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -15,7 +15,7 @@ from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 from rest_framework_simplejwt.tokens import RefreshToken
-from reviews.models import User
+from rest_framework import viewsets
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -23,6 +23,12 @@ class GenreViewSet(GetPostDeleteViewSet):
     serializer_class = GenreSerializer
     lookup_field = 'slug'
     permission_classes = (IsAdminOrReadOnly,)
+
+
+class UsersViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (IsAdminOrNoPermission,)
 
 
 confirmation_codes = {}

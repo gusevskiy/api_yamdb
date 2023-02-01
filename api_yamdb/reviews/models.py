@@ -18,10 +18,24 @@ class Category(models.Model):
         return self.name
 
 
+USER_LEVELS = (
+    ("user", "User"),
+    ("moderator", "Moderator"),
+    ("admin", "Admin")
+)
+
+
 class User(AbstractUser):
+    role = models.CharField(
+        'role',
+        max_length=32,
+        choices=USER_LEVELS,
+        default="user"
+    )
     bio = models.TextField(
-        'Биография',
-        blank=True,
+        'bio',
+        max_length=256,
+        blank=True
     )
 
 
@@ -74,3 +88,11 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.text
+
+
+# id,name,year,category
+class Title(models.Model):
+    name = models.CharField(
+        max_length=200,
+        db_index=True
+    )

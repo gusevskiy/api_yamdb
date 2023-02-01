@@ -1,14 +1,30 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+from reviews.models import User, Review, Comment, Title
+
 from rest_framework import status
 from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from reviews.models import Genre, Category
+from reviews.models import (
+    Genre,
+    Category,
+    User,
+    Review,
+    Comment,
+    Title
+)
 from .models import User
-from .serializers import GenreSerializer, CategorySerializer
+from .serializers import (
+    GenreSerializer,
+    CategorySerializer,
+    ReviewSerializer,
+    CommentSerializer,
+    TitleSerialiser
+)
 from .mixins import GetPostDeleteViewSet
 from .permissions import IsAdminOrReadOnly
 
@@ -25,6 +41,21 @@ class CategoryViewSet(GetPostDeleteViewSet):
     serializer_class = CategorySerializer
     lookup_field = 'slug'
     permission_classes = (IsAdminOrReadOnly,)
+
+
+class ReviewViewSet(ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+
+
+class CommentViewSet(ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+
+
+class TitleViewSet(ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerialiser
 
 
 confirmation_codes = {}

@@ -1,6 +1,30 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+
+USER_LEVELS = (
+    ("user", "User"),
+    ("moderator", "Moderator"),
+    ("admin", "Admin")
+)
+
+
+class User(AbstractUser):
+    role = models.CharField(
+        'role',
+        max_length=32,
+        choices=USER_LEVELS,
+        default="user"
+    )
+    bio = models.TextField(
+        'bio',
+        max_length=256,
+        blank=True
+    )
+
+
+class Title(models.Model):
+    pass
 
 
 class Genre(models.Model):
@@ -9,13 +33,6 @@ class Genre(models.Model):
 
     def __str__(self):
         return self.name
-
-
-class User(AbstractUser):
-    bio = models.TextField(
-    'Биография',
-    blank=True,
-    )
 
 
 # id,title_id,text,author,score,pub_date
@@ -40,6 +57,7 @@ class Review(models.Model):
         auto_now_add=True,
         verbose_name='Date of publication'
     )
+
     def __str__(self):
         return self.text
 
@@ -63,5 +81,6 @@ class Comment(models.Model):
         auto_now_add=True,
         verbose_name='Date of publication'
     )
+
     def __str__(self):
         return self.text

@@ -9,8 +9,6 @@ class GenreSerializer(serializers.ModelSerializer):
         lookup_field = 'slug'
 
 
-
-
 class ReviewSerializer(serializers.ModelSerializer):
     # review = serializers.
     class Meta:

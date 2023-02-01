@@ -8,7 +8,7 @@ app_name = 'api'
 router = DefaultRouter()
 router.register('genres', GenreViewSet, basename='genres')
 urlpatterns = [
-    path('v1/', include(router.urls)),
+    path('', include(router.urls)),
     path('auth/signup/', views.signup),
     path('auth/token/', views.get_token)
 ]

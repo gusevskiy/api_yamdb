@@ -15,8 +15,7 @@ from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
-
+from reviews.models import User
 
 
 class GenreViewSet(GetPostDeleteViewSet):

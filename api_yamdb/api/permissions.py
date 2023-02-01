@@ -9,7 +9,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         is_safe = request.method in permissions.SAFE_METHODS
         if is_safe:
             return True
-        if not request.user.is_authentificated:
+        if request.user.is_anonymous:
             return False
         is_superuser = request.user.is_superuser
         is_admin = request.user.level == "admin"

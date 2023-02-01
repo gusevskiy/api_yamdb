@@ -41,3 +41,15 @@ class IsUserAuthorOrModeratorOrReadOnly(permissions.BasePermission):
         if obj.author == request.user:
             return True
         return False
+
+
+class IsAdminOrNoPermission(permissions.BasePermission):
+    """
+    Проверяет, является ли пользователь админом.
+    """
+    def has_permission(self, request, view):
+        if request.user.is_anonymous:
+            return False
+        if request.user.role == "admin":
+            return True
+        return False

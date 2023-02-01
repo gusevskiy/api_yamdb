@@ -46,6 +46,11 @@ def get_tokens_for_user(user):
 def signup(request):
     email = request.data["email"]
     username = request.data["username"]
+    if username == "me":
+        return Response(
+            {"error": "You cant register a user with name 'me'"},
+            status.HTTP_400_BAD_REQUEST
+        )
     if User.objects.filter(username=username).exists():
         return Response(
             {"error": "User with this username already exists!"},

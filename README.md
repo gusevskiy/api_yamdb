@@ -1,2 +1,2 @@
-# api_yamdb
-api_yamdb
+# YaMDb
+Сервис отзывов на искусство

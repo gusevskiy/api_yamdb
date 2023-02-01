@@ -50,6 +50,14 @@ def get_tokens_for_user(user):
 
 @api_view(['POST'])
 def signup(request):
+    keys = request.data.keys()
+    if "email" not in keys or "username" not in keys:
+        return Response(
+            {
+                "error": "These value wasnt provided. Read docs again ;)",
+            },
+            status.HTTP_400_BAD_REQUEST
+        )
     email = request.data["email"]
     username = request.data["username"]
     if username == "me":
@@ -88,12 +96,20 @@ def signup(request):
 
 @api_view(['POST'])
 def get_token(request):
+    keys = request.data.keys()
+    if "confirmation_code" not in keys or "username" not in keys:
+        return Response(
+            {
+                "error": "These value wasnt provided. Read docs again ;)",
+            },
+            status.HTTP_400_BAD_REQUEST
+        )
     username = request.data["username"]
     confirmation_code = request.data["confirmation_code"]
     if username not in confirmation_codes.keys():
         return Response(
             {"error": "Please, request a code at /auth/signup/"},
-            status.HTTP_400_BAD_REQUEST
+            status.HTTP_404_NOT_FOUND
         )
 
     right_code = confirmation_codes[username]["code"]

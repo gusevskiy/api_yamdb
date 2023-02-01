@@ -9,7 +9,7 @@ router = DefaultRouter()
 router.register('genres', GenreViewSet, basename='genres')
 router.register('users', UsersViewSet, basename='users')
 urlpatterns = [
-    path('', include(router.urls)),
-    path('auth/signup/', views.signup),
-    path('auth/token/', views.get_token)
+    path('api/v1/', include(router.urls)),
+    path('api/v1/auth/signup/', views.signup),
+    path('api/v1/auth/token/', views.get_token)
 ]

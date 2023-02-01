@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -11,10 +10,18 @@ class Genre(models.Model):
         return self.name
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=256)
+    slug = models.SlugField(unique=True, max_length=50)
+
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractUser):
     bio = models.TextField(
-    'Биография',
-    blank=True,
+        'Биография',
+        blank=True,
     )
 
 
@@ -40,6 +47,7 @@ class Review(models.Model):
         auto_now_add=True,
         verbose_name='Date of publication'
     )
+
     def __str__(self):
         return self.text
 
@@ -63,5 +71,6 @@ class Comment(models.Model):
         auto_now_add=True,
         verbose_name='Date of publication'
     )
+
     def __str__(self):
         return self.text

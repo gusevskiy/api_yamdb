@@ -12,5 +12,5 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         if not request.user.is_authentificated:
             return False
         is_superuser = request.user.is_superuser
-        is_admin = request.user.level == "admin"
+        is_admin = request.user.role == "admin"
         return is_superuser or is_admin

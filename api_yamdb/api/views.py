@@ -1,7 +1,4 @@
 from reviews.models import Genre, User
-from .serializers import GenreSerializer, UserSerializer
-from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -36,6 +33,7 @@ class UsersViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
+
 
 class CategoryViewSet(GetPostDeleteViewSet):
     queryset = Category.objects.all()

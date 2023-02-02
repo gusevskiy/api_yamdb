@@ -35,6 +35,14 @@ class Genre(models.Model):
         return self.name
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=256)
+    slug = models.SlugField(unique=True, max_length=50)
+
+    def __str__(self):
+        return self.name
+
+
 # id,title_id,text,author,score,pub_date
 class Review(models.Model):
     title = models.ForeignKey(

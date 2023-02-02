@@ -1,13 +1,7 @@
-"""from rest_framework import viewsets, serializers, permissions
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.db.models.query import QuerySet"""
-
 from reviews.models import Genre, User
 from .serializers import GenreSerializer, UserSerializer
 from .mixins import GetPostDeleteViewSet
 from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
-
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -20,6 +14,11 @@ from django.core.validators import validate_email, validate_slug
 from django.core.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
+
+from reviews.models import Genre, Category, User
+from .serializers import GenreSerializer, CategorySerializer, UserSerializer
+from .mixins import GetPostDeleteViewSet
+from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -37,6 +36,12 @@ class UsersViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
+
+class CategoryViewSet(GetPostDeleteViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    lookup_field = 'slug'
+    permission_classes = (IsAdminOrReadOnly,)
 
 
 confirmation_codes = {}

@@ -1,5 +1,11 @@
-from reviews.models import Genre, User
-from .serializers import GenreSerializer, UserSerializer
+from .serializers import (
+    GenreSerializer,
+    UserSerializer,
+    CategorySerializer,
+    UserSerializer,
+    TitlesSerializer,
+    ReviewSerializer
+)
 from .mixins import GetPostDeleteViewSet
 from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 from rest_framework.decorators import api_view
@@ -15,10 +21,9 @@ from django.core.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
 
-from reviews.models import Genre, Category, User
-from .serializers import GenreSerializer, CategorySerializer, UserSerializer
+from reviews.models import Genre, Category, User, Title, Review
+
 from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -180,3 +185,16 @@ def get_token(request):
         {"error": "Wrong confirmation code! Please, request new code."},
         status.HTTP_400_BAD_REQUEST
     )
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitlesSerializer
+    permission_classes = (IsAdminOrReadOnly, )
+    pagination_class = PageNumberPagination
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    

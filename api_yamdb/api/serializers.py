@@ -1,5 +1,7 @@
+import datetime as dt
 from rest_framework import serializers
-from reviews.models import Review, Comment, Genre, User, Category
+from rest_framework.relations import SlugRelatedField
+from reviews.models import Review, Comment, Genre, User, Category, Title
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -49,3 +51,19 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         model = Comment
         read_only_fields = ('author', 'post')
+
+
+class TitlesSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(
+        slug_field='slug', many=False, queryset=Category.objects.all()
+    )
+    genre = serializers.SlugRelatedField(
+        slug_field='slug',
+        many=True,
+        required=False,
+        queryset=Genre.objects.all()
+    )
+
+    class Meta:
+        fields = '__all__'
+        model = Title

@@ -2,9 +2,8 @@
 from django.db import models
 #from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
-
-#User = get_user_model()
-
+from django.utils import timezone
+from .validators import year_title
 
 
 USER_LEVELS = (
@@ -26,10 +25,47 @@ class User(AbstractUser):
         max_length=256,
         blank=True
     )
+    
+    @property
+    def is_admin(self):
+        return self.role == "admin" or self.is_superuser
 
 
+class Category(models.Model):
+    name = models.CharField(max_length=256)
+    slug = models.SlugField(unique=True, max_length=50)
+
+    def __str__(self):
+        return self.name
+
+# id,name,year,category
 class Title(models.Model):
-    pass
+    name = models.CharField(
+        max_length=200,
+        null=True,
+    )
+    year = models.IntegerField(
+        validators=(year_title, )
+    )
+    category = models.ForeignKey(
+        Category,
+        verbose_name='category',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='titles'
+    )
+    description = models.TextField(
+        max_length=255,
+        null=True,
+        )
+    genre = models.ManyToManyField(
+        'Genre',
+        related_name='titles',
+        verbose_name='жанр'
+    )
+    def __str__(self):
+        return self.name
 
 
 class Genre(models.Model):
@@ -40,12 +76,7 @@ class Genre(models.Model):
         return self.name
 
 
-class Category(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True, max_length=50)
 
-    def __str__(self):
-        return self.name
 
 
 # id,title_id,text,author,score,pub_date

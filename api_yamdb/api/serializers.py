@@ -14,6 +14,10 @@ class UserSerializer(serializers.ModelSerializer):
             'last_name'
         )
         lookup_field = 'username'
+        extra_kwargs = {
+            'username': {'required': True},
+            'email': {'required': True},
+        }
 
 
 class GenreSerializer(serializers.ModelSerializer):

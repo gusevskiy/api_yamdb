@@ -1,12 +1,23 @@
 from rest_framework import serializers
-from reviews.models import (
-    Review,
-    Comment,
-    Genre, 
-    Category,
-    Title,
-    User
-)
+from reviews.models import Review, Comment, Genre, User, Category
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'role',
+            'bio',
+            'first_name',
+            'last_name'
+        )
+        lookup_field = 'username'
+        extra_kwargs = {
+            'username': {'required': True},
+            'email': {'required': True},
+        }
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -38,24 +49,3 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         model = Comment
         read_only_fields = ('author', 'post')
-
-
-class TitleSerialiser(serializers.ModelSerializer):
-    class Meta:
-        model = Title
-        fields = '__all__'
-
-
-class UsersSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('__all__')
-
-
-class NotAdminSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role')
-        read_only_fields = ('role',)

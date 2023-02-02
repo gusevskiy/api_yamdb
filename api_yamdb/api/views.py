@@ -1,44 +1,24 @@
+from reviews.models import Genre, User
+from .serializers import GenreSerializer, UserSerializer
+from .mixins import GetPostDeleteViewSet
+from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
-from reviews.models import Review, Comment, Title
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import action
-
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import viewsets
+from django.core.validators import validate_email, validate_slug
+from django.core.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
 
-from reviews.models import (
-    Genre,
-    Category,
-    User,
-    Review,
-    Comment,
-    Title
-)
-from .serializers import (
-    GenreSerializer,
-    CategorySerializer,
-    ReviewSerializer,
-    CommentSerializer,
-    TitleSerialiser,
-    UsersSerializer,
-    NotAdminSerializer
-    
-)
+from reviews.models import Genre, Category, User
+from .serializers import GenreSerializer, CategorySerializer, UserSerializer
 from .mixins import GetPostDeleteViewSet
-from .permissions import (
-    IsAdminOrReadOnly,
-    IsRoleAdmin,
-    IsRoleModerator,
-    IsAuthorOrReadOnly,
-    AuthorAndStaffOrReadOnly,
-    AdminOnly
-    )
+from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -48,6 +28,15 @@ class GenreViewSet(GetPostDeleteViewSet):
     permission_classes = (IsAdminOrReadOnly,)
 
 
+class UsersViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    lookup_field = 'username'
+    permission_classes = (IsAdminOrNoPermission,)
+    pagination_class = PageNumberPagination
+    filter_backends = (SearchFilter,)
+    search_fields = ('username',)
+
 class CategoryViewSet(GetPostDeleteViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -55,45 +44,15 @@ class CategoryViewSet(GetPostDeleteViewSet):
     permission_classes = (IsAdminOrReadOnly,)
 
 
-class ReviewViewSet(ModelViewSet):
-    serializer_class = ReviewSerializer
-    permission_classes = (
-        IsRoleAdmin | IsRoleModerator | IsAuthorOrReadOnly,
-    )
-    
-    def get_queryset(self):
-        title = get_object_or_404(
-            Title,
-            id=self.kwargs.get('title_id'))
-        return title.reviews.all()
-
-    def perform_create(self, serializer):
-        title = get_object_or_404(
-            Title,
-            id=self.kwargs.get('title_id'))
-        serializer.save(author=self.request.user, title=title)
-
-
-class CommentViewSet(ModelViewSet):
-    serializer_class = CommentSerializer
-    permission_classes = (AuthorAndStaffOrReadOnly,)
-        
-    def get_queryset(self):
-        title = get_object_or_404(Review, pk=self.kwargs.get('post_id'))
-        return title.comments.all()
-
-    def perform_create(self, serializer):
-        review = get_object_or_404(Review, pk=self.kwargs.get('review_id'))
-        serializer.save(author=self.request.user, review=review)
-
-
-class TitleViewSet(ModelViewSet):
-    queryset = Title.objects.all()
-    serializer_class = TitleSerialiser
-    permission_classes = (IsAdminOrReadOnly, )
-
-
 confirmation_codes = {}
+
+
+def validate(validator, text):
+    try:
+        validator(text)
+        return True
+    except ValidationError:
+        return False
 
 
 def generate_code(username):
@@ -112,19 +71,67 @@ def get_tokens_for_user(user):
 
 @api_view(['POST'])
 def signup(request):
+    keys = request.data.keys()
+    if "email" not in keys or "username" not in keys:
+        resp = {
+                "error": "These value wasnt provided. Read docs again ;)",
+            }
+        if "email" not in keys:
+            resp["email"] = []
+        if "username" not in keys:
+            resp["username"] = []
+        return Response(
+            resp,
+            status.HTTP_400_BAD_REQUEST
+        )
     email = request.data["email"]
     username = request.data["username"]
-    if User.objects.filter(username=username).exists():
+    # Validate data
+    validate_data = [
+        {
+            "name": "email",
+            "valid": validate(validate_email, email) and not len(email) >= 254
+        },
+        {
+            "name": "username",
+            "valid": (
+                validate(validate_slug, username) and
+                not username == "me" and
+                not len(username) >= 150
+            )
+        }
+    ]
+    resp = {}
+    for d in validate_data:
+        if not d["valid"]:
+            resp[d["name"]] = []
+    if len(resp.keys()) > 0:
+        resp["error"] = "Invalid data!"
         return Response(
-            {"error": "User with this username already exists!"},
+            resp,
             status.HTTP_400_BAD_REQUEST
         )
-    if User.objects.filter(email=email).exists():
+    if (
+        User.objects.filter(email=email).exists() and
+        not User.objects.filter(username=username).exists()
+    ):
         return Response(
-            {"error": "User with this email already exists!"},
+            {"error": "This email is already used by other user."},
             status.HTTP_400_BAD_REQUEST
         )
-
+    if (
+        not User.objects.filter(email=email).exists() and
+        User.objects.filter(username=username).exists()
+    ):
+        return Response(
+            {"error": "This username is already used by other user."},
+            status.HTTP_400_BAD_REQUEST
+        )
+    user = User.objects.get_or_create(
+        username=username,
+        email=email
+    )[0]
+    user.save()
     confirmation_code = generate_code(username)
     confirmation_codes[username] = {
         'code': confirmation_code,
@@ -145,21 +152,27 @@ def signup(request):
 
 @api_view(['POST'])
 def get_token(request):
+    keys = request.data.keys()
+    if "confirmation_code" not in keys or "username" not in keys:
+        return Response(
+            {
+                "error": "These value wasnt provided. Read docs again ;)",
+            },
+            status.HTTP_400_BAD_REQUEST
+        )
     username = request.data["username"]
     confirmation_code = request.data["confirmation_code"]
     if username not in confirmation_codes.keys():
         return Response(
             {"error": "Please, request a code at /auth/signup/"},
-            status.HTTP_400_BAD_REQUEST
+            status.HTTP_404_NOT_FOUND
         )
 
     right_code = confirmation_codes[username]["code"]
     if right_code == confirmation_code:
-        user = User.objects.get_or_create(
-            username=username,
-            email=confirmation_codes[username]["email"]
+        user = User.objects.get(
+            username=username
         )
-        user.save()
         token_pair = get_tokens_for_user(user)
         return Response({"token": token_pair['access']}, status.HTTP_200_OK)
 
@@ -167,35 +180,3 @@ def get_token(request):
         {"error": "Wrong confirmation code! Please, request new code."},
         status.HTTP_400_BAD_REQUEST
     )
-
-
-class UsersViewSet(ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UsersSerializer
-    permission_classes = (IsAuthenticated, AdminOnly,)
-    lookup_field = 'username'
-    # filter_backends = (SearchFilter, )
-    search_fields = ('username', )
-
-    @action(
-        methods=['GET', 'PATCH'],
-        detail=False,
-        permission_classes=(IsAuthenticated,),
-        url_path='me')
-    def get_current_user_info(self, request):
-        serializer = UsersSerializer(request.user)
-        if request.method == 'PATCH':
-            if request.user.is_admin:
-                serializer = UsersSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
-            else:
-                serializer = NotAdminSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.data)

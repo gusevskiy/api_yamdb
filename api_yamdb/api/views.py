@@ -5,12 +5,15 @@ from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
 
 from reviews.models import Genre, Category
-from .models import User
 from .serializers import GenreSerializer, CategorySerializer
 from .mixins import GetPostDeleteViewSet
 from .permissions import IsAdminOrReadOnly
+
+
+User = get_user_model()
 
 
 class GenreViewSet(GetPostDeleteViewSet):

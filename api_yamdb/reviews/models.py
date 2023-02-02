@@ -1,6 +1,32 @@
-from django.contrib.auth.models import AbstractUser
+#from django.contrib.auth.models import AbstractUser
 from django.db import models
+#from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
 
+#User = get_user_model()
+
+
+
+
+USER_LEVELS = (
+    ("user", "User"),
+    ("moderator", "Moderator"),
+    ("admin", "Admin")
+)
+
+
+class User(AbstractUser):
+    role = models.CharField(
+        'role',
+        max_length=32,
+        choices=USER_LEVELS,
+        default="user"
+    )
+    bio = models.TextField(
+        'bio',
+        max_length=256,
+        blank=True
+    )
 
 class Genre(models.Model):
     name = models.CharField(max_length=256)
@@ -18,23 +44,28 @@ class Category(models.Model):
         return self.name
 
 
-class User(AbstractUser):
+"""class User(AbstractUser):
     bio = models.TextField(
         'Биография',
         blank=True,
-    )
+    )"""
+
+
+class Title(models.Model):
+    def __str__(self):
+        return self.name
 
 
 # id,title_id,text,author,score,pub_date
 class Review(models.Model):
     title = models.ForeignKey(
-        'Title',
+        Title,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='Сomposition'
     )
     author = models.ForeignKey(
-        'User',
+        User,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='Author'
@@ -55,14 +86,14 @@ class Review(models.Model):
 # id,review_id,text,author,pub_date
 class Comment(models.Model):
     review = models.ForeignKey(
-        'Review',
+        Review,
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Feedback'
     )
     text = models.TextField()
     author = models.ForeignKey(
-        'User',
+        User,
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Author'

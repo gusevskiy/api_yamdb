@@ -1,9 +1,12 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
-from reviews.models import User, Review, Comment, Title
+from reviews.models import Review, Comment, Title
+from django.shortcuts import get_object_or_404
+from rest_framework.decorators import action
 
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
@@ -17,16 +20,25 @@ from reviews.models import (
     Comment,
     Title
 )
-from .models import User
 from .serializers import (
     GenreSerializer,
     CategorySerializer,
     ReviewSerializer,
     CommentSerializer,
-    TitleSerialiser
+    TitleSerialiser,
+    UsersSerializer,
+    NotAdminSerializer
+    
 )
 from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly
+from .permissions import (
+    IsAdminOrReadOnly,
+    IsRoleAdmin,
+    IsRoleModerator,
+    IsAuthorOrReadOnly,
+    AuthorAndStaffOrReadOnly,
+    AdminOnly
+    )
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -44,18 +56,41 @@ class CategoryViewSet(GetPostDeleteViewSet):
 
 
 class ReviewViewSet(ModelViewSet):
-    queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+    permission_classes = (
+        IsRoleAdmin | IsRoleModerator | IsAuthorOrReadOnly,
+    )
+    
+    def get_queryset(self):
+        title = get_object_or_404(
+            Title,
+            id=self.kwargs.get('title_id'))
+        return title.reviews.all()
+
+    def perform_create(self, serializer):
+        title = get_object_or_404(
+            Title,
+            id=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
 
 
 class CommentViewSet(ModelViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = (AuthorAndStaffOrReadOnly,)
+        
+    def get_queryset(self):
+        review = get_object_or_404(Review, pk=self.kwargs.get('post_id'))
+        return review.comments.all()
+
+    def perform_create(self, serializer):
+        review = get_object_or_404(Review, pk=self.kwargs.get('review_id'))
+        serializer.save(author=self.request.user, review=review)
 
 
 class TitleViewSet(ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerialiser
+    permission_classes = (IsAdminOrReadOnly, )
 
 
 confirmation_codes = {}
@@ -132,3 +167,35 @@ def get_token(request):
         {"error": "Wrong confirmation code! Please, request new code."},
         status.HTTP_400_BAD_REQUEST
     )
+
+
+class UsersViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UsersSerializer
+    permission_classes = (IsAuthenticated, AdminOnly,)
+    lookup_field = 'username'
+    # filter_backends = (SearchFilter, )
+    search_fields = ('username', )
+
+    @action(
+        methods=['GET', 'PATCH'],
+        detail=False,
+        permission_classes=(IsAuthenticated,),
+        url_path='me')
+    def get_current_user_info(self, request):
+        serializer = UsersSerializer(request.user)
+        if request.method == 'PATCH':
+            if request.user.is_admin:
+                serializer = UsersSerializer(
+                    request.user,
+                    data=request.data,
+                    partial=True)
+            else:
+                serializer = NotAdminSerializer(
+                    request.user,
+                    data=request.data,
+                    partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)

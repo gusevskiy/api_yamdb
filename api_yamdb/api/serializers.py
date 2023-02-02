@@ -5,6 +5,7 @@ from reviews.models import (
     Genre, 
     Category,
     Title,
+    User
 )
 
 
@@ -43,3 +44,18 @@ class TitleSerialiser(serializers.ModelSerializer):
     class Meta:
         model = Title
         fields = '__all__'
+
+
+class UsersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('__all__')
+
+
+class NotAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name',
+            'last_name', 'bio', 'role')
+        read_only_fields = ('role',)

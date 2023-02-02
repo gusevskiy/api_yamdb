@@ -7,7 +7,8 @@ from .views import (
     GenreViewSet,
     ReviewViewSet,
     CommentViewSet,
-    TitleViewSet
+    TitleViewSet,
+    UsersViewSet
 )
 
 
@@ -18,6 +19,7 @@ router.register('categories', CategoryViewSet, basename='categories')
 router.register('review', ReviewViewSet, basename='review')
 router.register('review', CommentViewSet, basename='comment')
 router.register('titles', TitleViewSet, basename='titles')
+router.register('users', UsersViewSet, basename='users')
 urlpatterns = [
     path('v1/', include(router.urls)),
     path('auth/signup/', views.signup),

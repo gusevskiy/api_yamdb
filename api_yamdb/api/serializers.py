@@ -13,6 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name'
         )
+        lookup_field = 'username'
 
 
 class GenreSerializer(serializers.ModelSerializer):

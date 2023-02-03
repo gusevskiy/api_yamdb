@@ -59,26 +59,29 @@ class Title(models.Model):
     name = models.CharField(
         max_length=200,
         null=True,
+        verbose_name='Название'
     )
     year = models.IntegerField(
-        validators=(year_title, )
+        validators=(year_title, ),
+        verbose_name='Дата'
     )
     category = models.ForeignKey(
         Category,
-        verbose_name='category',
+        verbose_name='Категория',
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        related_name='titles'
+        related_name='titles',
     )
     description = models.TextField(
         max_length=255,
         null=True,
+        verbose_name='Описание'
         )
     genre = models.ManyToManyField(
         Genre,
-        # related_name='titles',
-        # verbose_name='жанр',
+        related_name='titles',
+        verbose_name='жанр',
         through='GenreTitle'
     )
     def __str__(self):
@@ -102,13 +105,13 @@ class Review(models.Model):
         Title,
         on_delete=models.CASCADE,
         related_name='reviews',
-        verbose_name='Сomposition'
+        verbose_name='Произведение'
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='reviews',
-        verbose_name='Author'
+        verbose_name='Автор'
     )
     text = models.TextField()
     score = models.IntegerField(
@@ -122,7 +125,7 @@ class Review(models.Model):
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Date of publication'
+        verbose_name='Дата публикации'
     )
 
     def __str__(self):
@@ -135,12 +138,16 @@ class Comment(models.Model):
         Review,
         on_delete=models.CASCADE,
         related_name='comments',
+        verbose_name='Ревью'
     )
-    text = models.TextField()
+    text = models.TextField(
+        verbose_name='Текст'
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='comments',
+        verbose_name='Автор'
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,

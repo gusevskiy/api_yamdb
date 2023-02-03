@@ -9,7 +9,11 @@ from .serializers import (
     CommentSerializer
 )
 from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission, AuthorOrReadOnly
+from .permissions import (
+    IsAdminOrReadOnly,
+    IsAdminOrNoPermission,
+    AuthorOrModeratorReadOnly
+)
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -20,11 +24,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import viewsets
 from django.core.validators import validate_email, validate_slug
 from django.core.exceptions import ValidationError
+from django.db.models import Avg
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
 from django.shortcuts import get_object_or_404
 from reviews.models import Genre, Category, User, Title, Review, Comment
 from api.paginator import CommentPaginator
+from .filters import TitleFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 
@@ -190,10 +197,12 @@ def get_token(request):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     serializer_class = TitlesSerializer
     permission_classes = (IsAdminOrReadOnly, )
     pagination_class = PageNumberPagination
+    filretset_class = TitleFilter
+    filter_backends = (DjangoFilterBackend,)
     
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
@@ -203,6 +212,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     pagination_class = CommentPaginator
+    permission_classes = (AuthorOrModeratorReadOnly, )
+    
     def get_queryset(self):
         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
         new_queryset = title.reviews.all()
@@ -217,7 +228,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     pagination_class = CommentPaginator
-    permission_classes = (AuthorOrReadOnly, )
+    # permission_classes = (AuthorOrReadOnly, )
     
     # def get_queryset(self):
     #     title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))

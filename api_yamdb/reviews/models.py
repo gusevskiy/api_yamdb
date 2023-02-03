@@ -1,6 +1,6 @@
 #from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.core.validators import MaxLengthValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
 from .validators import year_title
 
@@ -28,6 +28,14 @@ class User(AbstractUser):
     @property
     def is_admin(self):
         return self.role == "admin" or self.is_superuser
+    
+    @property
+    def is_moderator(self):
+        return self.role == "moderator"
+    
+    @property
+    def Is_user(self):
+        return self.role == "user"
 
 
 class Category(models.Model):
@@ -69,8 +77,9 @@ class Title(models.Model):
         )
     genre = models.ManyToManyField(
         Genre,
-        related_name='titles',
-        verbose_name='жанр'
+        # related_name='titles',
+        # verbose_name='жанр',
+        through='GenreTitle'
     )
     def __str__(self):
         return self.name
@@ -103,12 +112,12 @@ class Review(models.Model):
     )
     text = models.TextField()
     score = models.IntegerField(
-        verbose_name='Evaluation',
+        verbose_name='Оценка',
         default=0,
-        # validators=[
-        #     MaxLengthValidator(10),
-        #     MinValueValidator(1)
-        # ],
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(10)
+        ],
         
     )
     pub_date = models.DateTimeField(
@@ -126,18 +135,16 @@ class Comment(models.Model):
         Review,
         on_delete=models.CASCADE,
         related_name='comments',
-        verbose_name='Feedback'
     )
     text = models.TextField()
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='comments',
-        verbose_name='Author'
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Date of publication'
+        db_index=True
     )
 
     def __str__(self):

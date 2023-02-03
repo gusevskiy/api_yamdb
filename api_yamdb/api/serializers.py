@@ -45,7 +45,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Review
-        fields = '__all__'
+        fields = ('id', 'author', 'text', 'score', 'pub_date')
         read_onlyfields = ['title']
 
 
@@ -54,9 +54,9 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only=True, slug_field='username'
     )
     class Meta:
-        fields = '__all__'
+        fields = 'author'
         model = Comment
-        read_only_fields = ('author', 'post')
+        read_only_fields = ('text', 'author', 'pub_date')
 
 
 class TitlesSerializer(serializers.ModelSerializer):
@@ -71,5 +71,16 @@ class TitlesSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        fields = '__all__'
+        fields = ('__all__')
         model = Title
+
+
+class TitleViewSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(many=False, required=True)
+    genre = GenreSerializer(many=True, required=False)
+    # rating = serializers.IntegerField()
+    
+    class Meta:
+        model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+        read_only_fields = ('id', 'name', 'year', 'description', 'genre', 'category')

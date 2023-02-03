@@ -1,7 +1,7 @@
-from reviews.models import Genre, User
-from .serializers import GenreSerializer, UserSerializer
+from reviews.models import Genre, User, Category
+from .serializers import GenreSerializer, UserSerializer, CategorySerializer
 from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
+from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission, UsersMePermission
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -14,11 +14,6 @@ from django.core.validators import validate_email, validate_slug
 from django.core.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
-
-from reviews.models import Genre, Category, User
-from .serializers import GenreSerializer, CategorySerializer, UserSerializer
-from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -36,6 +31,12 @@ class UsersViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
+
+    def get_object(self):
+        if self.kwargs.get('username') == 'me':
+            self.kwargs['username'] = self.request.user.username
+        return super(UsersViewSet, self).get_object()
+
 
 class CategoryViewSet(GetPostDeleteViewSet):
     queryset = Category.objects.all()
@@ -74,8 +75,8 @@ def signup(request):
     keys = request.data.keys()
     if "email" not in keys or "username" not in keys:
         resp = {
-                "error": "These value wasnt provided. Read docs again ;)",
-            }
+            "error": "These value wasnt provided. Read docs again ;)",
+        }
         if "email" not in keys:
             resp["email"] = []
         if "username" not in keys:
@@ -95,9 +96,9 @@ def signup(request):
         {
             "name": "username",
             "valid": (
-                validate(validate_slug, username) and
-                not username == "me" and
-                not len(username) >= 150
+                validate(validate_slug, username)
+                and not username == "me"
+                and not len(username) >= 150
             )
         }
     ]
@@ -112,16 +113,16 @@ def signup(request):
             status.HTTP_400_BAD_REQUEST
         )
     if (
-        User.objects.filter(email=email).exists() and
-        not User.objects.filter(username=username).exists()
+        User.objects.filter(email=email).exists()
+        and not User.objects.filter(username=username).exists()
     ):
         return Response(
             {"error": "This email is already used by other user."},
             status.HTTP_400_BAD_REQUEST
         )
     if (
-        not User.objects.filter(email=email).exists() and
-        User.objects.filter(username=username).exists()
+        not User.objects.filter(email=email).exists()
+        and User.objects.filter(username=username).exists()
     ):
         return Response(
             {"error": "This username is already used by other user."},

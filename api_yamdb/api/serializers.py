@@ -3,6 +3,16 @@ from reviews.models import Review, Comment, Genre, User, Category
 
 
 class UserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        email = value
+        if len(email) > 254:
+            raise serializers.ValidationError("Email is too long!")
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("This email is already using!")
+        return email
+
     class Meta:
         model = User
         fields = (

@@ -43,6 +43,17 @@ class IsUserAuthorOrModeratorOrReadOnly(permissions.BasePermission):
         return False
 
 
+class UsersMePermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_anonymous:
+            return False
+        if (
+            request.method in ['DELETE']
+        ):
+            return False
+        return False
+
+
 class IsAdminOrNoPermission(permissions.BasePermission):
     """
     Проверяет, является ли пользователь админом.
@@ -50,6 +61,12 @@ class IsAdminOrNoPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user.is_anonymous:
             return False
-        if request.user.role == "admin":
+        if (
+            request.user.role == "admin"
+            or request.user.is_superuser
+        ):
             return True
-        return False
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        return True

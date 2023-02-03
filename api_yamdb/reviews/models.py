@@ -37,6 +37,15 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+
+class Genre(models.Model):
+    name = models.CharField(max_length=256)
+    slug = models.SlugField(unique=True, max_length=50)
+
+    def __str__(self):
+        return self.name
+
+
 # id,name,year,category
 class Title(models.Model):
     name = models.CharField(
@@ -59,7 +68,7 @@ class Title(models.Model):
         null=True,
         )
     genre = models.ManyToManyField(
-        'Genre',
+        Genre,
         related_name='titles',
         verbose_name='жанр'
     )
@@ -67,12 +76,12 @@ class Title(models.Model):
         return self.name
 
 
-class Genre(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True, max_length=50)
-
-    def __str__(self):
-        return self.name
+class GenreTitle(models.Model):
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
+    title = models.ForeignKey(Title, on_delete=models.CASCADE)
+    
+    def __str_(self):
+        return f'{self.genre} {self.title}'
 
 
 
@@ -96,10 +105,10 @@ class Review(models.Model):
     score = models.IntegerField(
         verbose_name='Evaluation',
         default=0,
-        validators=[
-            MaxLengthValidator(10),
-            MinValueValidator(1)
-        ],
+        # validators=[
+        #     MaxLengthValidator(10),
+        #     MinValueValidator(1)
+        # ],
         
     )
     pub_date = models.DateTimeField(

@@ -4,7 +4,8 @@ from .serializers import (
     CategorySerializer,
     UserSerializer,
     TitlesSerializer,
-    ReviewSerializer
+    ReviewSerializer,
+    CommentSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
@@ -20,10 +21,10 @@ from django.core.validators import validate_email, validate_slug
 from django.core.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
-
+from django.shortcuts import get_object_or_404
 from reviews.models import Genre, Category, User, Title, Review
+from api.paginator import CommentPaginator
 
-from .mixins import GetPostDeleteViewSet
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -195,6 +196,36 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
     serializer_class = ReviewSerializer
+    pagination_class = CommentPaginator
+    def get_queryset(self):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        new_queryset = title.reviews.all()
+        return new_queryset
     
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    pagination_class = CommentPaginator
+    
+    
+    def get_queryset(self):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        try:
+            review = title.reviews.get(id=self.kwargs.get('review_id'))
+        except TypeError:
+            TypeError('Нет такого отзыва')
+        queryset = review.comments.all()
+        return queryset
+    
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        try:
+            review = title.reviews.get(id=self.kwargs.get('review_id'))
+        except TypeError:
+            TypeError('Нет такого отзыва')
+        serializer.save(author=self.request.user, review=review)

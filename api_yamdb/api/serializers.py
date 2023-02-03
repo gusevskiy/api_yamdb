@@ -37,16 +37,22 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    # review = serializers.
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        default=serializers.CurrentUserDefault(),
+        read_only=True
+    )
+    
     class Meta:
         model = Review
         fields = '__all__'
+        read_onlyfields = ['title']
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    # author = serializers.SlugRelatedField(
-    #     read_only=True, slug_field='username'
-    # )
+    author = serializers.SlugRelatedField(
+        read_only=True, slug_field='username'
+    )
     class Meta:
         fields = '__all__'
         model = Comment

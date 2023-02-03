@@ -1,8 +1,7 @@
 #from django.contrib.auth.models import AbstractUser
 from django.db import models
-#from django.contrib.auth import get_user_model
+from django.core.validators import MaxLengthValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
-from django.utils import timezone
 from .validators import year_title
 
 
@@ -95,7 +94,13 @@ class Review(models.Model):
     )
     text = models.TextField()
     score = models.IntegerField(
-        verbose_name='Evaluation'
+        verbose_name='Evaluation',
+        default=0,
+        validators=[
+            MaxLengthValidator(10),
+            MinValueValidator(1)
+        ],
+        
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,

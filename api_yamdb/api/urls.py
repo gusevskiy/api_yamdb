@@ -6,7 +6,8 @@ from .views import (
     UsersViewSet,
     CategoryViewSet,
     TitleViewSet,
-    ReviewViewSet
+    ReviewViewSet,
+    CommentViewSet
 )
 
 
@@ -16,7 +17,14 @@ router.register('genres', GenreViewSet, basename='genres')
 router.register('users', UsersViewSet, basename='users')
 router.register('categories', CategoryViewSet, basename='categories')
 router.register('titles', TitleViewSet, basename='titles')
-router.register('review', ReviewViewSet, basename='review')
+router.register(
+    r'titles/(?P<title_id>[\d]+)/reviews', ReviewViewSet, basename='reviews'
+)
+router.register(
+    r'titles/(?P<title_id>[\d]+)/reviews/(?P<review_id>[\d]+)/comments',
+    CommentViewSet,
+    basename='comments'
+)
 urlpatterns = [
     path('api/v1/', include(router.urls)),
     path('api/v1/auth/signup/', views.signup),

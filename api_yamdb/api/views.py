@@ -12,7 +12,9 @@ from .mixins import GetPostDeleteViewSet
 from .permissions import (
     IsAdminOrReadOnly,
     IsAdminOrNoPermission,
-    AuthorOrModeratorReadOnly
+    AuthorOrModeratorReadOnly,
+    AuthorAndStaffOrReadOnly,
+    
 )
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -21,7 +23,7 @@ from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins, filters
 from django.core.validators import validate_email, validate_slug
 from django.core.exceptions import ValidationError
 from django.db.models import Avg
@@ -228,29 +230,36 @@ class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     pagination_class = CommentPaginator
-    # permission_classes = (AuthorOrReadOnly, )
+    permission_classes = (AuthorAndStaffOrReadOnly, )
     
-    # def get_queryset(self):
-    #     title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
-    #     return title.comments.all()
-
-    # def perform_create(self, serializer):
-    #     title = get_object_or_404(Title, pk=self.kwargs.get('title_id'))
-    #     serializer.save(author=self.request.user, title=title)
-        
-    # def get_queryset(self):
-    #     title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-    #     try:
-    #         review = title.reviews.get(id=self.kwargs.get('review_id'))
-    #     except TypeError:
-    #         TypeError('Нет такого отзыва')
-    #     queryset = review.comments.all()
-    #     return queryset
+    def get_queryset(self):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        try:
+            review = title.reviews.get(id=self.kwargs.get('review_id'))
+        except TypeError:
+            TypeError('Нет такого отзыва')
+        queryset = review.comments.all()
+        return queryset
     
-    # def perform_create(self, serializer):
-    #     title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-    #     try:
-    #         review = title.reviews.get(id=self.kwargs.get('review_id'))
-    #     except TypeError:
-    #         TypeError('Нет такого отзыва')
-    #     serializer.save(author=self.request.user, review=review)
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        try:
+            review = title.reviews.get(id=self.kwargs.get('review_id'))
+        except TypeError:
+            TypeError('Нет такого отзыва')
+        serializer.save(author=self.request.user, review=review)
+    
+    
+    class ReviewGenreModelMixin(
+        mixins.CreateModelMixin,
+        mixins.ListModelMixin,
+        mixins.DestroyModelMixin,
+        viewsets.GenericViewSet
+    ):
+        permission_classes = [
+            AuthorOrModeratorReadOnly,
+            IsAdminOrReadOnly
+        ]
+        filter_backends = (filters.SearchFilter,)
+        search_fields = ('name', 'slug')
+        lookup_field = 'slug'

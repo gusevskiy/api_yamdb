@@ -1,5 +1,10 @@
 from rest_framework import serializers
-from reviews.models import Review, Comment, Genre, User, Category
+
+from reviews.models import (
+    Genre, User, Category, Title, TitleGenre
+)
+
+import datetime
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -34,18 +39,41 @@ class CategorySerializer(serializers.ModelSerializer):
         lookup_field = 'slug'
 
 
-class ReviewSerializer(serializers.ModelSerializer):
-    # review = serializers.
+class TitleSerializer(serializers.ModelSerializer):
+    genre = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Genre.objects.all(),
+        many=True
+    )
+    category = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Category.objects.all()
+    )
+
+    def validate_year(self, value):
+        current_year = datetime.datetime.now().year
+        if value > current_year:
+            raise serializers.ValidationError("Future year is prohibited")
+        return value
+
     class Meta:
-        model = Review
-        fields = '__all__'
+        model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+
+    def create(self, validated_data):
+        genres = validated_data.pop('genre')
+        title = Title.objects.create(**validated_data)
+        for genre in genres:
+            current_genre = genre
+            TitleGenre.objects.create(
+                genre=current_genre, title=title)
+        return title
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    # author = serializers.SlugRelatedField(
-    #     read_only=True, slug_field='username'
-    # )
+class TitleSerializerGET(serializers.ModelSerializer):
+    genre = GenreSerializer(many=True)
+    category = CategorySerializer()
+
     class Meta:
-        fields = '__all__'
-        model = Comment
-        read_only_fields = ('author', 'post')
+        model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')

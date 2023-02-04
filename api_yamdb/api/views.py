@@ -12,8 +12,11 @@ from django.core.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
 
-from reviews.models import Genre, Category, User
-from .serializers import GenreSerializer, CategorySerializer, UserSerializer
+from reviews.models import Genre, User, Title, Category
+from .serializers import (
+    GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
+    TitleSerializerGET
+)
 from .mixins import GetPostDeleteViewSet
 from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 
@@ -40,6 +43,17 @@ class CategoryViewSet(GetPostDeleteViewSet):
     serializer_class = CategorySerializer
     lookup_field = 'slug'
     permission_classes = (IsAdminOrReadOnly,)
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return TitleSerializerGET
+        return TitleSerializer
 
 
 confirmation_codes = {}
@@ -72,8 +86,8 @@ def signup(request):
     keys = request.data.keys()
     if "email" not in keys or "username" not in keys:
         resp = {
-                "error": "These value wasnt provided. Read docs again ;)",
-            }
+            "error": "These value wasnt provided. Read docs again ;)",
+        }
         if "email" not in keys:
             resp["email"] = []
         if "username" not in keys:

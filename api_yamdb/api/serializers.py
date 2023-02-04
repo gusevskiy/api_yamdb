@@ -1,10 +1,10 @@
+import datetime
+
 from rest_framework import serializers
 
 from reviews.models import (
     Genre, User, Category, Title, TitleGenre
 )
-
-import datetime
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -50,15 +50,15 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all()
     )
 
+    class Meta:
+        model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+
     def validate_year(self, value):
         current_year = datetime.datetime.now().year
         if value > current_year:
             raise serializers.ValidationError("Future year is prohibited")
         return value
-
-    class Meta:
-        model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
     def create(self, validated_data):
         genres = validated_data.pop('genre')

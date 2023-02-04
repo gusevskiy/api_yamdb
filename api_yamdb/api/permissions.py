@@ -5,10 +5,6 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     """
     Проверяет, является ли пользователь админом или суперюзером.
     """
-    """def has_permission(self, request, view):
-        return True
-    def has_object_permission(self, request, view, obj):
-        return True"""
     def has_permission(self, request, view):
         is_safe = request.method in permissions.SAFE_METHODS
         if is_safe:

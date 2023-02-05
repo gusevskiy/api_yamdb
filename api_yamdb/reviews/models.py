@@ -1,4 +1,3 @@
-# from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
@@ -86,7 +85,6 @@ class TitleGenre(models.Model):
         ]
 
 
-# id,title_id,text,author,score,pub_date
 class Review(models.Model):
     title = models.ForeignKey(
         Title,
@@ -128,7 +126,6 @@ class Review(models.Model):
         return self.text
 
 
-# id,review_id,text,author,pub_date
 class Comment(models.Model):
     review = models.ForeignKey(
         Review,

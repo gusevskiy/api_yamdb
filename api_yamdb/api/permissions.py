@@ -63,16 +63,13 @@ class AuthorOrModeratorReadOnly(permissions.BasePermission):
 
         return (
             request.method in permissions.SAFE_METHODS
-            # если метод безопасный, то можно вообще всем
             or (
                 request.user.is_authenticated
-                # доступ только для аутентифицированных,
-                # про неё подробнее напишу ниже
                 and (
-                    obj.author == request.user  # своё можно редачить автору
-                    or request.user.is_superuser  # или суперюзеру
-                    or request.user.role == 'admin'  # админу тоже можно
-                    or request.user.role == 'moderator'  # и модератору
+                    obj.author == request.user
+                    or request.user.is_superuser
+                    or request.user.role == 'admin'
+                    or request.user.role == 'moderator'
                 )
             )
         )

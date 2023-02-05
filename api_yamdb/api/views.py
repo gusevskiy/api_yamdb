@@ -243,7 +243,6 @@ def get_token(request):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    # pagination_class = CommentPaginator
     permission_classes = (AuthorOrModeratorReadOnly, )
 
     def get_queryset(self):
@@ -259,7 +258,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    # pagination_class = CommentPaginator
     permission_classes = (AuthorAndStaffOrReadOnly, )
 
     def get_queryset(self):

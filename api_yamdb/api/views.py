@@ -1,11 +1,17 @@
-from reviews.models import Genre, User, Category, Title
+from django.shortcuts import get_object_or_404
+from django.db.models import Avg
+from reviews.models import Genre, User, Title, Category, Comment, Review
 from .serializers import (
-    GenreSerializer, UserSerializer, CategorySerializer, UsersMeSerializer,
-    TitleSerializerGET, TitleSerializer
+    GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
+    TitleSerializerGET, ReviewSerializer, CommentSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
-    IsAdminOrReadOnly, IsAdminOrNoPermission, UsersMePermission
+    IsAdminOrReadOnly,
+    IsAdminOrNoPermission,
+    AuthorOrModeratorReadOnly,
+    AuthorAndStaffOrReadOnly,
+    UsersMePermission
 )
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -84,7 +90,7 @@ class CategoryViewSet(GetPostDeleteViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
@@ -233,3 +239,57 @@ def get_token(request):
         {"error": "Wrong confirmation code! Please, request new code."},
         status.HTTP_400_BAD_REQUEST
     )
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    # pagination_class = CommentPaginator
+    permission_classes = (AuthorOrModeratorReadOnly, )
+    
+    def get_queryset(self):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        new_queryset = title.reviews.all()
+        return new_queryset
+    
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
+
+
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    # pagination_class = CommentPaginator
+    permission_classes = (AuthorAndStaffOrReadOnly, )
+    
+    def get_queryset(self):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        try:
+            review = title.reviews.get(id=self.kwargs.get('review_id'))
+        except TypeError:
+            TypeError('Нет такого отзыва')
+        queryset = review.comments.all()
+        return queryset
+    
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        try:
+            review = title.reviews.get(id=self.kwargs.get('review_id'))
+        except TypeError:
+            TypeError('Нет такого отзыва')
+        serializer.save(author=self.request.user, review=review)
+    
+    
+    # class ReviewGenreModelMixin(
+    #     mixins.CreateModelMixin,
+    #     mixins.ListModelMixin,
+    #     mixins.DestroyModelMixin,
+    #     viewsets.GenericViewSet
+    # ):
+    #     permission_classes = [
+    #         AuthorOrModeratorReadOnly,
+    #         IsAdminOrReadOnly
+    #     ]
+    #     filter_backends = (filters.SearchFilter,)
+    #     search_fields = ('name', 'slug')
+    #     lookup_field = 'slug'

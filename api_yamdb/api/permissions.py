@@ -47,11 +47,7 @@ class UsersMePermission(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user.is_anonymous:
             return False
-        if (
-            request.method in ['DELETE']
-        ):
-            return False
-        return False
+        return True
 
 
 class IsAdminOrNoPermission(permissions.BasePermission):
@@ -66,7 +62,7 @@ class IsAdminOrNoPermission(permissions.BasePermission):
             or request.user.is_superuser
         ):
             return True
-        return True
+        return False
 
     def has_object_permission(self, request, view, obj):
         return True

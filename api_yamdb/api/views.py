@@ -1,6 +1,7 @@
-from reviews.models import Genre, User, Category
+from reviews.models import Genre, User, Category, Title
 from .serializers import (
-    GenreSerializer, UserSerializer, CategorySerializer, UsersMeSerializer
+    GenreSerializer, UserSerializer, CategorySerializer, UsersMeSerializer,
+    TitleSerializerGET, TitleSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
@@ -8,33 +9,18 @@ from .permissions import (
 )
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
 from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
-from rest_framework import status, viewsets
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.validators import validate_email, validate_slug
 from django.core.exceptions import ValidationError
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
 from rest_framework.exceptions import MethodNotAllowed
-=======
-from django.core.mail import EmailMessage
 from django_filters.rest_framework import DjangoFilterBackend
-
-from reviews.models import Genre, User, Title, Category
-from .serializers import (
-    GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
-    TitleSerializerGET
-)
-from .mixins import GetPostDeleteViewSet
-from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
 from .filtersets import TitleFilterSet
 
 

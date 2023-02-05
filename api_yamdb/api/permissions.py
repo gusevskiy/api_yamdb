@@ -29,6 +29,13 @@ class IsUserAuthorOrModeratorOrReadOnly(permissions.BasePermission):
         return False
 
 
+class UsersMePermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_anonymous:
+            return False
+        return True
+
+
 class IsAdminOrNoPermission(permissions.BasePermission):
     """
     Проверяет, является ли пользователь админом.

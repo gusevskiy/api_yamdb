@@ -1,17 +1,5 @@
-from time import time
-from hashlib import md5
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
-from rest_framework import status, viewsets
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.validators import validate_email, validate_slug
-from django.core.exceptions import ValidationError
-from django.core.mail import EmailMessage
-from django_filters.rest_framework import DjangoFilterBackend
-
+from django.shortcuts import get_object_or_404
+from django.db.models import Avg
 from reviews.models import Genre, User, Title, Category, Comment, Review
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
@@ -22,11 +10,24 @@ from .permissions import (
     IsAdminOrReadOnly,
     IsAdminOrNoPermission,
     AuthorOrModeratorReadOnly,
-    AuthorAndStaffOrReadOnly
+    AuthorAndStaffOrReadOnly,
+    UsersMePermission
 )
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status, viewsets
+from django.core.mail import EmailMessage
+from time import time
+from hashlib import md5
+
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.validators import validate_email, validate_slug
+from django.core.exceptions import ValidationError
+from rest_framework.exceptions import MethodNotAllowed
+from django_filters.rest_framework import DjangoFilterBackend
 from .filtersets import TitleFilterSet
-from django.shortcuts import get_object_or_404
-from django.db.models import Avg
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -41,12 +42,41 @@ class GenreViewSet(GetPostDeleteViewSet):
 
 class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
     lookup_field = 'username'
     permission_classes = (IsAdminOrNoPermission,)
     pagination_class = PageNumberPagination
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
+
+    def get_permissions(self):
+        if self.kwargs.get('username') == 'me':
+            return (UsersMePermission(),)
+        return (IsAdminOrNoPermission(),)
+
+    def get_object(self):
+        if self.kwargs.get('username') == 'me':
+            self.kwargs['username'] = self.request.user.username
+        return super(UsersViewSet, self).get_object()
+
+    def get_serializer_class(self):
+        if self.kwargs.get('username') == 'me':
+            return UsersMeSerializer
+        return UserSerializer
+
+    def update(self, request, *args, **kwargs):
+        if (
+            request.method == 'PUT'
+        ):
+            raise MethodNotAllowed(method='PUT')
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if self.get_serializer_class() == UsersMeSerializer:
+            raise MethodNotAllowed(method='DELETE')
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        serializer.save(role=self.request.user.role)
 
 
 class CategoryViewSet(GetPostDeleteViewSet):
@@ -60,7 +90,6 @@ class CategoryViewSet(GetPostDeleteViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    # queryset = Title.objects.all()
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -104,8 +133,8 @@ def signup(request):
     keys = request.data.keys()
     if "email" not in keys or "username" not in keys:
         resp = {
-                "error": "These value wasnt provided. Read docs again ;)",
-            }
+            "error": "These value wasnt provided. Read docs again ;)",
+        }
         if "email" not in keys:
             resp["email"] = []
         if "username" not in keys:
@@ -125,9 +154,9 @@ def signup(request):
         {
             "name": "username",
             "valid": (
-                validate(validate_slug, username) and
-                not username == "me" and
-                not len(username) >= 150
+                validate(validate_slug, username)
+                and not username == "me"
+                and not len(username) >= 150
             )
         }
     ]
@@ -142,16 +171,16 @@ def signup(request):
             status.HTTP_400_BAD_REQUEST
         )
     if (
-        User.objects.filter(email=email).exists() and
-        not User.objects.filter(username=username).exists()
+        User.objects.filter(email=email).exists()
+        and not User.objects.filter(username=username).exists()
     ):
         return Response(
             {"error": "This email is already used by other user."},
             status.HTTP_400_BAD_REQUEST
         )
     if (
-        not User.objects.filter(email=email).exists() and
-        User.objects.filter(username=username).exists()
+        not User.objects.filter(email=email).exists()
+        and User.objects.filter(username=username).exists()
     ):
         return Response(
             {"error": "This username is already used by other user."},

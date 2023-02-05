@@ -11,6 +11,21 @@ from django.core.exceptions import ValidationError
 
 
 class UserSerializer(serializers.ModelSerializer):
+    Genre, User, Category, Title, TitleGenre
+)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        email = value
+        if len(email) > 254:
+            raise serializers.ValidationError("Email is too long!")
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError("This email is already using!")
+        return email
+
     class Meta:
         model = User
         fields = (
@@ -26,6 +41,11 @@ class UserSerializer(serializers.ModelSerializer):
             'username': {'required': True},
             'email': {'required': True},
         }
+
+
+class UsersMeSerializer(UserSerializer):
+    class Meta(UserSerializer.Meta):
+        read_only_fields = ('role',)
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -93,8 +113,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only=True
     )
     
-
-    
     def validate(self, data):
         request = self.context['request']
         author = request.user
@@ -112,6 +130,26 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ('id', 'author', 'text', 'score', 'pub_date')
         read_onlyfields = ['title']
 
+    def validate_year(self, value):
+        current_year = datetime.datetime.now().year
+        if value > current_year:
+            raise serializers.ValidationError("Future year is prohibited")
+        return value
+
+    def create(self, validated_data):
+        genres = validated_data.pop('genre')
+        title = Title.objects.create(**validated_data)
+        for genre in genres:
+            current_genre = genre
+            TitleGenre.objects.create(
+                genre=current_genre, title=title)
+        return title
+
+
+class TitleSerializerGET(serializers.ModelSerializer):
+    genre = GenreSerializer(many=True)
+    category = CategorySerializer()
+
 
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
@@ -120,4 +158,3 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date')
-

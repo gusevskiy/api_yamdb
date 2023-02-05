@@ -12,13 +12,30 @@ from rest_framework import status
 from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
+from rest_framework import status, viewsets
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import viewsets
 from django.core.validators import validate_email, validate_slug
 from django.core.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
 from rest_framework.exceptions import MethodNotAllowed
+=======
+from django.core.mail import EmailMessage
+from django_filters.rest_framework import DjangoFilterBackend
+
+from reviews.models import Genre, User, Title, Category
+from .serializers import (
+    GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
+    TitleSerializerGET
+)
+from .mixins import GetPostDeleteViewSet
+from .permissions import IsAdminOrReadOnly, IsAdminOrNoPermission
+from .filtersets import TitleFilterSet
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -26,6 +43,9 @@ class GenreViewSet(GetPostDeleteViewSet):
     serializer_class = GenreSerializer
     lookup_field = 'slug'
     permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
+    filter_backends = (SearchFilter,)
+    search_fields = ('name',)
 
 
 class UsersViewSet(viewsets.ModelViewSet):
@@ -72,6 +92,23 @@ class CategoryViewSet(GetPostDeleteViewSet):
     serializer_class = CategorySerializer
     lookup_field = 'slug'
     permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
+    filter_backends = (SearchFilter,)
+    search_fields = ('name',)
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilterSet
+    pagination_class = PageNumberPagination
+
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return TitleSerializerGET
+        return TitleSerializer
 
 
 confirmation_codes = {}

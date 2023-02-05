@@ -1,40 +1,32 @@
+from time import time
+from hashlib import md5
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
+from rest_framework import status, viewsets
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.validators import validate_email, validate_slug
+from django.core.exceptions import ValidationError
+from django.core.mail import EmailMessage
+from django_filters.rest_framework import DjangoFilterBackend
+
+from reviews.models import Genre, User, Title, Category, Comment, Review
 from .serializers import (
-    GenreSerializer,
-    UserSerializer,
-    CategorySerializer,
-    UserSerializer,
-    TitlesSerializer,
-    TitleViewSerializer,
-    ReviewSerializer,
-    CommentSerializer
+    GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
+    TitleSerializerGET, ReviewSerializer, CommentSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
     IsAdminOrReadOnly,
     IsAdminOrNoPermission,
     AuthorOrModeratorReadOnly,
-    AuthorAndStaffOrReadOnly,
-    
+    AuthorAndStaffOrReadOnly
 )
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from django.core.mail import EmailMessage
-from time import time
-from hashlib import md5
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import viewsets, mixins, filters
-from django.core.validators import validate_email, validate_slug
-from django.core.exceptions import ValidationError
-from django.db.models import Avg
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
+from .filtersets import TitleFilterSet
 from django.shortcuts import get_object_or_404
-from reviews.models import Genre, Category, User, Title, Review, Comment
-from api.paginator import CommentPaginator
-from .filters import TitleFilter
-from django_filters.rest_framework import DjangoFilterBackend
-
+from django.db.models import Avg
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -42,6 +34,9 @@ class GenreViewSet(GetPostDeleteViewSet):
     serializer_class = GenreSerializer
     lookup_field = 'slug'
     permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
+    filter_backends = (SearchFilter,)
+    search_fields = ('name',)
 
 
 class UsersViewSet(viewsets.ModelViewSet):
@@ -53,11 +48,30 @@ class UsersViewSet(viewsets.ModelViewSet):
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
 
+
 class CategoryViewSet(GetPostDeleteViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
     permission_classes = (IsAdminOrReadOnly,)
+    pagination_class = PageNumberPagination
+    filter_backends = (SearchFilter,)
+    search_fields = ('name',)
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    # queryset = Title.objects.all()
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+    serializer_class = TitleSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilterSet
+    pagination_class = PageNumberPagination
+
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return TitleSerializerGET
+        return TitleSerializer
 
 
 confirmation_codes = {}
@@ -198,22 +212,9 @@ def get_token(request):
     )
 
 
-class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-    serializer_class = TitlesSerializer
-    permission_classes = (IsAdminOrReadOnly, )
-    pagination_class = PageNumberPagination
-    filretset_class = TitleFilter
-    filter_backends = (DjangoFilterBackend,)
-    
-    def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
-            return TitleViewSerializer
-        return TitlesSerializer
-
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    pagination_class = CommentPaginator
+    # pagination_class = CommentPaginator
     permission_classes = (AuthorOrModeratorReadOnly, )
     
     def get_queryset(self):
@@ -229,7 +230,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    pagination_class = CommentPaginator
+    # pagination_class = CommentPaginator
     permission_classes = (AuthorAndStaffOrReadOnly, )
     
     def get_queryset(self):
@@ -250,16 +251,16 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user, review=review)
     
     
-    class ReviewGenreModelMixin(
-        mixins.CreateModelMixin,
-        mixins.ListModelMixin,
-        mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-    ):
-        permission_classes = [
-            AuthorOrModeratorReadOnly,
-            IsAdminOrReadOnly
-        ]
-        filter_backends = (filters.SearchFilter,)
-        search_fields = ('name', 'slug')
-        lookup_field = 'slug'
+    # class ReviewGenreModelMixin(
+    #     mixins.CreateModelMixin,
+    #     mixins.ListModelMixin,
+    #     mixins.DestroyModelMixin,
+    #     viewsets.GenericViewSet
+    # ):
+    #     permission_classes = [
+    #         AuthorOrModeratorReadOnly,
+    #         IsAdminOrReadOnly
+    #     ]
+    #     filter_backends = (filters.SearchFilter,)
+    #     search_fields = ('name', 'slug')
+    #     lookup_field = 'slug'

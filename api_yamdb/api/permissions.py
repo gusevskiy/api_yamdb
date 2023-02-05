@@ -48,7 +48,7 @@ class IsAdminOrNoPermission(permissions.BasePermission):
             return False
         if request.user.role == "admin":
             return True
-        return False
+        return user_check(request.user)
 
 
 class AuthorOrModeratorReadOnly(permissions.BasePermission):
@@ -62,14 +62,17 @@ class AuthorOrModeratorReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
 
         return (
-            request.method in permissions.SAFE_METHODS # если метод безопасный, то можно вообще всем
+            request.method in permissions.SAFE_METHODS
+            # если метод безопасный, то можно вообще всем
             or (
-                request.user.is_authenticated # доступ только для аутентифицированных, про неё подробнее напишу ниже
+                request.user.is_authenticated
+                # доступ только для аутентифицированных,
+                # про неё подробнее напишу ниже
                 and (
-                    obj.author==request.user # своё можно редачить автору
-                    or request.user.is_superuser # или суперюзеру
-                    or request.user.role=='admin' #админу тоже можно
-                    or request.user.role=='moderator' # и модератору
+                    obj.author == request.user  # своё можно редачить автору
+                    or request.user.is_superuser  # или суперюзеру
+                    or request.user.role == 'admin'  # админу тоже можно
+                    or request.user.role == 'moderator'  # и модератору
                 )
             )
         )
@@ -94,7 +97,6 @@ class AuthorAndStaffOrReadOnly(permissions.BasePermission):
                 )
             )
         )
-        return user_check(request.user)
 
 
 def user_check(user):

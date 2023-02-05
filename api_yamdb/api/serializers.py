@@ -9,12 +9,6 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 
 
-
-class UserSerializer(serializers.ModelSerializer):
-    Genre, User, Category, Title, TitleGenre
-)
-
-
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
 
@@ -76,7 +70,11 @@ class TitleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category', 'rating')
+        fields = (
+            'id', 'name',
+            'year', 'description',
+            'genre', 'category', 'rating'
+        )
 
     def validate_year(self, value):
         current_year = datetime.datetime.now().year
@@ -101,10 +99,12 @@ class TitleSerializerGET(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category', 'rating')
+        fields = (
+            'id', 'name', 'year',
+            'description', 'genre',
+            'category', 'rating'
+        )
 
-
-############################################################
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
@@ -112,7 +112,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         default=serializers.CurrentUserDefault(),
         read_only=True
     )
-    
+
     def validate(self, data):
         request = self.context['request']
         author = request.user
@@ -124,37 +124,18 @@ class ReviewSerializer(serializers.ModelSerializer):
         ):
             raise ValidationError('Может существовать только один отзыв!')
         return data
-    
+
     class Meta:
         model = Review
         fields = ('id', 'author', 'text', 'score', 'pub_date')
         read_onlyfields = ['title']
-
-    def validate_year(self, value):
-        current_year = datetime.datetime.now().year
-        if value > current_year:
-            raise serializers.ValidationError("Future year is prohibited")
-        return value
-
-    def create(self, validated_data):
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(**validated_data)
-        for genre in genres:
-            current_genre = genre
-            TitleGenre.objects.create(
-                genre=current_genre, title=title)
-        return title
-
-
-class TitleSerializerGET(serializers.ModelSerializer):
-    genre = GenreSerializer(many=True)
-    category = CategorySerializer()
 
 
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
+
     class Meta:
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date')

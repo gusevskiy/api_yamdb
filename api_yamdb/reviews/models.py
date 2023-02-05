@@ -1,4 +1,4 @@
-#from django.contrib.auth.models import AbstractUser
+# from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
@@ -23,14 +23,15 @@ class User(AbstractUser):
         max_length=256,
         blank=True
     )
+
     @property
     def is_admin(self):
         return self.role == "admin" or self.is_superuser
-    
+
     @property
     def is_moderator(self):
         return self.role == "moderator"
-    
+
     @property
     def Is_user(self):
         return self.role == "user"
@@ -107,7 +108,6 @@ class Review(models.Model):
             MinValueValidator(1),
             MaxValueValidator(10)
         ],
-        
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,

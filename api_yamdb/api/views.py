@@ -1,9 +1,9 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
-from reviews.models import Genre, User, Title, Category, Comment, Review
+from reviews.models import Genre, User, Title, Category, Comment
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
-    TitleSerializerGET, ReviewSerializer, CommentSerializer
+    TitleSerializerGET, ReviewSerializer, CommentSerializer, UsersMeSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
@@ -245,12 +245,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     # pagination_class = CommentPaginator
     permission_classes = (AuthorOrModeratorReadOnly, )
-    
+
     def get_queryset(self):
         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
         new_queryset = title.reviews.all()
         return new_queryset
-    
+
     def perform_create(self, serializer):
         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
         serializer.save(author=self.request.user, title=title)
@@ -261,7 +261,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     # pagination_class = CommentPaginator
     permission_classes = (AuthorAndStaffOrReadOnly, )
-    
+
     def get_queryset(self):
         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
         try:
@@ -270,7 +270,7 @@ class CommentViewSet(viewsets.ModelViewSet):
             TypeError('Нет такого отзыва')
         queryset = review.comments.all()
         return queryset
-    
+
     def perform_create(self, serializer):
         title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
         try:
@@ -278,18 +278,3 @@ class CommentViewSet(viewsets.ModelViewSet):
         except TypeError:
             TypeError('Нет такого отзыва')
         serializer.save(author=self.request.user, review=review)
-    
-    
-    # class ReviewGenreModelMixin(
-    #     mixins.CreateModelMixin,
-    #     mixins.ListModelMixin,
-    #     mixins.DestroyModelMixin,
-    #     viewsets.GenericViewSet
-    # ):
-    #     permission_classes = [
-    #         AuthorOrModeratorReadOnly,
-    #         IsAdminOrReadOnly
-    #     ]
-    #     filter_backends = (filters.SearchFilter,)
-    #     search_fields = ('name', 'slug')
-    #     lookup_field = 'slug'

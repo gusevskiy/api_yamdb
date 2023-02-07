@@ -9,7 +9,6 @@ class TitleFilterSet(FilterSet):
     category = Filter(field_name='category__slug')
     genre = Filter(field_name='genre__slug')
     name = Filter(field_name="name", lookup_expr="icontains")
-    year = Filter(field_name="year")
 
     class Meta:
         model = Title

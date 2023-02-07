@@ -1,9 +1,26 @@
+from time import time
+from hashlib import md5
+
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status, viewsets
+from django.core.mail import EmailMessage
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.validators import validate_email, validate_slug
+from django.core.exceptions import ValidationError
+from rest_framework.exceptions import MethodNotAllowed
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .filtersets import TitleFilterSet
 from reviews.models import Genre, User, Title, Category, Comment
 from .serializers import (
-    GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
-    TitleSerializerGET, ReviewSerializer, CommentSerializer, UsersMeSerializer
+    GenreSerializer, CategorySerializer, UserSerializer, TitleReadSerializer,
+    TitleWriteSerializer, ReviewSerializer, CommentSerializer,
+    UsersMeSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
@@ -13,21 +30,6 @@ from .permissions import (
     AuthorAndStaffOrReadOnly,
     UsersMePermission
 )
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status, viewsets
-from django.core.mail import EmailMessage
-from time import time
-from hashlib import md5
-
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.validators import validate_email, validate_slug
-from django.core.exceptions import ValidationError
-from rest_framework.exceptions import MethodNotAllowed
-from django_filters.rest_framework import DjangoFilterBackend
-from .filtersets import TitleFilterSet
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -91,16 +93,15 @@ class CategoryViewSet(GetPostDeleteViewSet):
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-    serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilterSet
     pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
-        if self.action == 'list' or self.action == 'retrieve':
-            return TitleSerializerGET
-        return TitleSerializer
+        if self.request.method == 'GET':
+            return TitleReadSerializer
+        return TitleWriteSerializer
 
 
 confirmation_codes = {}

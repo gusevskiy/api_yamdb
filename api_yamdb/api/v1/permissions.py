@@ -7,11 +7,10 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         is_safe = request.method in permissions.SAFE_METHODS
-        if is_safe:
-            return True
-        if request.user.is_anonymous:
-            return False
-        return user_check(request.user)
+        return (
+            is_safe
+            or check_user_is_admin_or_superuser(request.user)
+        )
 
 
 class IsUserAuthorOrModeratorOrReadOnly(permissions.BasePermission):
@@ -48,7 +47,7 @@ class IsAdminOrNoPermission(permissions.BasePermission):
             return False
         if request.user.role == "admin":
             return True
-        return user_check(request.user)
+        return check_user_is_admin_or_superuser(request.user)
 
 
 class AuthorOrModeratorReadOnly(permissions.BasePermission):
@@ -96,9 +95,11 @@ class AuthorAndStaffOrReadOnly(permissions.BasePermission):
         )
 
 
-def user_check(user):
-    if user.is_anonymous:
-        return False
-    is_superuser = user.is_superuser
-    is_admin = user.role == 'admin'
-    return is_superuser or is_admin
+def check_user_is_admin_or_superuser(user):
+    return (
+        user.is_authenticated
+        and (
+            user.is_superuser
+            or user.is_admin
+        )
+    )

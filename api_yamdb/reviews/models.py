@@ -32,7 +32,7 @@ class User(AbstractUser):
         return self.role == "moderator"
 
     @property
-    def Is_user(self):
+    def is_user(self):
         return self.role == "user"
 
 
@@ -103,7 +103,6 @@ class Review(models.Model):
     text = models.TextField()
     score = models.IntegerField(
         verbose_name='Оценка',
-        default=0,
         validators=[
             MinValueValidator(1),
             MaxValueValidator(10)
@@ -111,7 +110,8 @@ class Review(models.Model):
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Дата публикации'
+        verbose_name='Дата публикации',
+        db_index=True,
     )
 
     class Meta:
@@ -121,7 +121,8 @@ class Review(models.Model):
             models.UniqueConstraint(
                 fields=('title', 'author', ),
                 name='unique review'
-            )]
+            )
+        ]
         ordering = ('pub_date',)
 
     def __str__(self):
@@ -134,7 +135,6 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Ревью',
-        unique=False
     )
     text = models.TextField(
         verbose_name='Текст'
@@ -149,6 +149,9 @@ class Comment(models.Model):
         auto_now_add=True,
         db_index=True
     )
+    
+    class Meta:
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.author

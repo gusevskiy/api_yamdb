@@ -109,18 +109,15 @@ class ReviewSerializer(serializers.ModelSerializer):
         request = self.context['request']
         author = request.user
         title_id = self.context.get('view').kwargs.get('title_id')
-        title = get_object_or_404(Title, pk=title_id)
-        if (
-            request.method == 'POST'
-            and Review.objects.filter(title=title, author=author).exists()
-        ):
+        # title = get_object_or_404(Title, pk=title_id)
+        if Review.objects.filter(title_id=title_id, author=author).exists():
             raise ValidationError('Может существовать только один отзыв!')
         return data
 
     class Meta:
         model = Review
         fields = ('id', 'author', 'text', 'score', 'pub_date')
-        read_onlyfields = ['title']
+        read_only_fields = ['title']
 
 
 class CommentSerializer(serializers.ModelSerializer):

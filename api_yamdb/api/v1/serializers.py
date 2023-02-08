@@ -1,12 +1,11 @@
-import datetime
-
 from rest_framework import serializers
+from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError
+from django.utils.timezone import now
 
 from reviews.models import (
     Genre, User, Category, Title, TitleGenre, Review, Comment
 )
-from django.shortcuts import get_object_or_404
-from django.core.exceptions import ValidationError
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -56,7 +55,7 @@ class CategorySerializer(serializers.ModelSerializer):
         lookup_field = 'slug'
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleWriteSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         slug_field='slug',
         queryset=Genre.objects.all(),
@@ -70,14 +69,10 @@ class TitleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Title
-        fields = (
-            'id', 'name',
-            'year', 'description',
-            'genre', 'category', 'rating'
-        )
+        fields = '__all__'
 
     def validate_year(self, value):
-        current_year = datetime.datetime.now().year
+        current_year = now().year
         if value > current_year:
             raise serializers.ValidationError("Future year is prohibited")
         return value
@@ -92,18 +87,15 @@ class TitleSerializer(serializers.ModelSerializer):
         return title
 
 
-class TitleSerializerGET(serializers.ModelSerializer):
+class TitleReadSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True)
     category = CategorySerializer()
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.IntegerField()
 
     class Meta:
         model = Title
-        fields = (
-            'id', 'name', 'year',
-            'description', 'genre',
-            'category', 'rating'
-        )
+        fields = '__all__'
+        read_only_fields = ('genre', 'rating')
 
 
 class ReviewSerializer(serializers.ModelSerializer):

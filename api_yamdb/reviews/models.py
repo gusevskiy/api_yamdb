@@ -75,14 +75,16 @@ class TitleGenre(models.Model):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
-        return f'{self.title} {self.genre}'
-
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['title', 'genre'],
-                                    name='unique_title_genre_pair')
+            models.UniqueConstraint(
+                fields=['title', 'genre'],
+                name='unique_title_genre_pair'
+            )
         ]
+
+    def __str__(self):
+        return f'{self.title} {self.genre}'
 
 
 class Review(models.Model):

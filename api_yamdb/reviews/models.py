@@ -3,37 +3,39 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import AbstractUser
 
 
-USER_LEVELS = (
-    ("user", "User"),
-    ("moderator", "Moderator"),
-    ("admin", "Admin")
-)
-
-
 class User(AbstractUser):
+    USER = 'user'
+    MODERATOR = 'moderator'
+    ADMIN = 'admin'
+    USER_LEVELS = (
+        (USER, "User"),
+        (MODERATOR, "Moderator"),
+        (ADMIN, "Admin")
+    )
+
     role = models.CharField(
-        'role',
+        'Роль',
         max_length=32,
         choices=USER_LEVELS,
-        default="user"
+        default=USER
     )
     bio = models.TextField(
-        'bio',
+        'О Себе',
         max_length=256,
         blank=True
     )
 
     @property
     def is_admin(self):
-        return self.role == "admin" or self.is_superuser
+        return self.role == User.ADMIN or self.is_superuser
 
     @property
     def is_moderator(self):
-        return self.role == "moderator"
+        return self.role == User.MODERATOR
 
     @property
-    def Is_user(self):
-        return self.role == "user"
+    def is_user(self):
+        return self.role == User.USER
 
 
 class Genre(models.Model):
@@ -75,14 +77,16 @@ class TitleGenre(models.Model):
         on_delete=models.CASCADE,
     )
 
-    def __str__(self):
-        return f'{self.title} {self.genre}'
-
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['title', 'genre'],
-                                    name='unique_title_genre_pair')
+            models.UniqueConstraint(
+                fields=['title', 'genre'],
+                name='unique_title_genre_pair'
+            )
         ]
+
+    def __str__(self):
+        return f'{self.title} {self.genre}'
 
 
 class Review(models.Model):
@@ -101,7 +105,6 @@ class Review(models.Model):
     text = models.TextField()
     score = models.IntegerField(
         verbose_name='Оценка',
-        default=0,
         validators=[
             MinValueValidator(1),
             MaxValueValidator(10)
@@ -109,7 +112,8 @@ class Review(models.Model):
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Дата публикации'
+        verbose_name='Дата публикации',
+        db_index=True,
     )
 
     class Meta:
@@ -118,8 +122,9 @@ class Review(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=('title', 'author', ),
-                name='unique review'
-            )]
+                name='unique_review'
+            )
+        ]
         ordering = ('pub_date',)
 
     def __str__(self):
@@ -132,7 +137,6 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         related_name='comments',
         verbose_name='Ревью',
-        unique=False
     )
     text = models.TextField(
         verbose_name='Текст'
@@ -147,6 +151,9 @@ class Comment(models.Model):
         auto_now_add=True,
         db_index=True
     )
+
+    class Meta:
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.author

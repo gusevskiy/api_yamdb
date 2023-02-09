@@ -1,9 +1,9 @@
-from time import time
-from hashlib import md5
-
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
-from .utils import send_confirmation_email, validate_user_data_and_get_response
+from .utils import (
+    check_code, code_exists, generate_code, get_tokens_for_user, save_code,
+    send_confirmation_email, validate_user_data_and_get_response
+)
 from reviews.models import Genre, User, Title, Category, Review
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer,
@@ -23,7 +23,6 @@ from rest_framework import status, viewsets
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
@@ -88,23 +87,6 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleWriteSerializer
 
 
-confirmation_codes = {}
-
-
-def generate_code(username):
-    timestamp = time()
-    code = md5((str(timestamp) + username).encode()).hexdigest()[:8]
-    return code
-
-
-def get_tokens_for_user(user):
-    refresh = RefreshToken.for_user(user)
-    return {
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-    }
-
-
 @api_view(['POST'])
 def signup(request):
     keys = request.data.keys()
@@ -133,10 +115,7 @@ def signup(request):
     )[0]
     user.save()
     confirmation_code = generate_code(username)
-    confirmation_codes[username] = {
-        'code': confirmation_code,
-        'email': email
-    }
+    save_code(confirmation_code, username, email)
 
     send_confirmation_email(email, confirmation_code, username)
 
@@ -153,20 +132,17 @@ def get_token(request):
             },
             status.HTTP_400_BAD_REQUEST
         )
+
     username = request.data["username"]
     confirmation_code = request.data["confirmation_code"]
-    if username not in confirmation_codes.keys():
+
+    if not code_exists(username):
         return Response(
             {"error": "Please, request a code at /auth/signup/"},
             status.HTTP_404_NOT_FOUND
         )
-
-    right_code = confirmation_codes[username]["code"]
-    if right_code == confirmation_code:
-        user = User.objects.get(
-            username=username
-        )
-        token_pair = get_tokens_for_user(user)
+    if check_code(confirmation_code, username):
+        token_pair = get_tokens_for_user(username)
         return Response({"token": token_pair['access']}, status.HTTP_200_OK)
 
     return Response(

@@ -151,7 +151,7 @@ class Comment(models.Model):
         auto_now_add=True,
         db_index=True
     )
-    
+
     class Meta:
         ordering = ('-pub_date',)
 

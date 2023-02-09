@@ -93,6 +93,7 @@ class AuthorAndStaffOrReadOnly(permissions.BasePermission):
             )
         )
 
+
 def check_user_is_admin_or_superuser(user):
     return (
         user.is_authenticated

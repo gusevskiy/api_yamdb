@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
+from django.core import validators
 from django.utils.timezone import now
 
 from reviews.models import (
@@ -10,14 +10,65 @@ from reviews.models import (
 
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField()
+    username = serializers.SlugField()
 
     def validate_email(self, value):
-        email = value
-        if len(email) > 254:
-            raise serializers.ValidationError("Email is too long!")
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError("This email is already using!")
-        return email
+        if len(value) > 254:
+            raise serializers.ValidationError(
+                {
+                    "error": "Email is too long!"
+                }
+            )
+        if User.objects.filter(email=value).exists():
+            user = User.objects.get(email=value)
+            if user.username != self.initial_data['username']:
+                raise serializers.ValidationError(
+                    {
+                        "error": "Username is already used!"
+                    }
+                )
+        try:
+            validators.validate_email(value)
+        except ValidationError:
+            raise serializers.ValidationError(
+                {
+                    "error": "'email' isnt email!",
+                    "email": []
+                }
+            )
+        return value
+
+    def validate_username(self, value):
+        if len(value) > 150:
+            raise serializers.ValidationError(
+                {
+                    "error": "Username is too long!"
+                }
+            )
+        if User.objects.filter(username=value).exists():
+            user = User.objects.get(username=value)
+            if user.email != self.initial_data['email']:
+                raise serializers.ValidationError(
+                    {
+                        "error": "Username is already used!"
+                    }
+                )
+        try:
+            validators.validate_slug(value)
+        except ValidationError:
+            raise serializers.ValidationError(
+                {
+                    "error": "'username' isnt slug!",
+                    "username": []
+                }
+            )
+        if value == "me":
+            raise serializers.ValidationError(
+                {
+                    "error": "You cannot use 'me' as username!"
+                }
+            )
+        return value
 
     class Meta:
         model = User

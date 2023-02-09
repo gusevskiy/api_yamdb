@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from reviews.models import User
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -24,28 +25,26 @@ class IsUserAuthorOrModeratorOrReadOnly(permissions.BasePermission):
             return True
         if request.user.is_anonymous:
             return False
-        if request.user.role == "moderator":
+        if request.user.role == User.MODERATOR:
             return True
         if obj.author == request.user:
             return True
         return False
 
 
-class UsersMePermission(permissions.BasePermission):
-    def has_permission(self, request, view):
-        if request.user.is_anonymous:
-            return False
-        return True
-
-
-class IsAdminOrNoPermission(permissions.BasePermission):
+class UsersEndpointPermission(permissions.BasePermission):
     """
     Проверяет, является ли пользователь админом.
     """
     def has_permission(self, request, view):
         if request.user.is_anonymous:
             return False
-        if request.user.role == "admin":
+        if view.action in ('destroy', 'create', 'list'):
+            return request.user.is_admin
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if view.kwargs.get('username') == 'me':
             return True
         return check_user_is_admin_or_superuser(request.user)
 
@@ -67,8 +66,8 @@ class AuthorOrModeratorReadOnly(permissions.BasePermission):
                 and (
                     obj.author == request.user
                     or request.user.is_superuser
-                    or request.user.role == 'admin'
-                    or request.user.role == 'moderator'
+                    or request.user.role == User.ADMIN
+                    or request.user.role == User.MODERATOR
                 )
             )
         )
@@ -93,7 +92,6 @@ class AuthorAndStaffOrReadOnly(permissions.BasePermission):
                 )
             )
         )
-
 
 def check_user_is_admin_or_superuser(user):
     return (

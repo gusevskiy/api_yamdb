@@ -16,7 +16,7 @@ from rest_framework.exceptions import MethodNotAllowed
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .filtersets import TitleFilterSet
-from reviews.models import Genre, User, Title, Category, Comment
+from reviews.models import Genre, User, Title, Category, Comment, Review
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer, TitleReadSerializer,
     TitleWriteSerializer, ReviewSerializer, CommentSerializer,
@@ -257,23 +257,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = (AuthorAndStaffOrReadOnly, )
 
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        try:
-            review = title.reviews.get(id=self.kwargs.get('review_id'))
-        except TypeError:
-            TypeError('Нет такого отзыва')
-        queryset = review.comments.all()
-        return queryset
+        review_id = self.kwargs.get('review_id')
+        review = get_object_or_404(Review, pk=review_id)
+        review_queryset = review.comments.all()
+        return review_queryset
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        try:
-            review = title.reviews.get(id=self.kwargs.get('review_id'))
-        except TypeError:
-            TypeError('Нет такого отзыва')
+        review_id = self.kwargs.get('review_id')
+        review = get_object_or_404(Review, pk=review_id)
         serializer.save(author=self.request.user, review=review)

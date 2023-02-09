@@ -94,7 +94,7 @@ class CategoryViewSet(GetPostDeleteViewSet):
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     permission_classes = (IsAdminOrReadOnly,)
-    # filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilterSet
     pagination_class = PageNumberPagination
 

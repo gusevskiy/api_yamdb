@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from .utils import send_confirmation_email, validate_user_data_and_get_response
 from reviews.models import Genre, User, Title, Category, Comment
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
@@ -8,24 +9,21 @@ from .serializers import (
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
     IsAdminOrReadOnly,
-    IsAdminOrNoPermission,
+    UsersEndpointPermission,
     AuthorOrModeratorReadOnly,
-    AuthorAndStaffOrReadOnly,
-    UsersMePermission
+    AuthorAndStaffOrReadOnly
 )
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status, viewsets
-from django.core.mail import EmailMessage
 from time import time
 from hashlib import md5
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.validators import validate_email, validate_slug
-from django.core.exceptions import ValidationError
-from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from .filtersets import TitleFilterSet
 
@@ -42,38 +40,23 @@ class GenreViewSet(GetPostDeleteViewSet):
 
 class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
+    serializer_class = UserSerializer
     lookup_field = 'username'
-    permission_classes = (IsAdminOrNoPermission,)
+    permission_classes = (UsersEndpointPermission,)
     pagination_class = PageNumberPagination
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
-    def get_permissions(self):
-        if self.kwargs.get('username') == 'me':
-            return (UsersMePermission(),)
-        return (IsAdminOrNoPermission(),)
-
-    def get_object(self):
-        if self.kwargs.get('username') == 'me':
-            self.kwargs['username'] = self.request.user.username
-        return super(UsersViewSet, self).get_object()
-
-    def get_serializer_class(self):
-        if self.kwargs.get('username') == 'me':
-            return UsersMeSerializer
-        return UserSerializer
-
-    def update(self, request, *args, **kwargs):
-        if (
-            request.method == 'PUT'
-        ):
-            raise MethodNotAllowed(method='PUT')
-        return super().update(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        if self.get_serializer_class() == UsersMeSerializer:
-            raise MethodNotAllowed(method='DELETE')
-        return super().destroy(request, *args, **kwargs)
+    @action(detail=False, methods=['get', 'patch'])
+    def me(self, request):
+        self.serializer_class = UsersMeSerializer
+        self.permission_classes = (IsAuthenticatedOrReadOnly, )
+        self.kwargs['username'] = request.user.username
+        if request.method == 'GET':
+            return self.retrieve(request)
+        elif request.method == 'PATCH':
+            return self.partial_update(request)
 
     def perform_update(self, serializer):
         serializer.save(role=self.request.user.role)
@@ -104,14 +87,6 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 
 confirmation_codes = {}
-
-
-def validate(validator, text):
-    try:
-        validator(text)
-        return True
-    except ValidationError:
-        return False
 
 
 def generate_code(username):
@@ -145,47 +120,11 @@ def signup(request):
         )
     email = request.data["email"]
     username = request.data["username"]
-    # Validate data
-    validate_data = [
-        {
-            "name": "email",
-            "valid": validate(validate_email, email) and not len(email) >= 254
-        },
-        {
-            "name": "username",
-            "valid": (
-                validate(validate_slug, username)
-                and not username == "me"
-                and not len(username) >= 150
-            )
-        }
-    ]
-    resp = {}
-    for d in validate_data:
-        if not d["valid"]:
-            resp[d["name"]] = []
-    if len(resp.keys()) > 0:
-        resp["error"] = "Invalid data!"
-        return Response(
-            resp,
-            status.HTTP_400_BAD_REQUEST
-        )
-    if (
-        User.objects.filter(email=email).exists()
-        and not User.objects.filter(username=username).exists()
-    ):
-        return Response(
-            {"error": "This email is already used by other user."},
-            status.HTTP_400_BAD_REQUEST
-        )
-    if (
-        not User.objects.filter(email=email).exists()
-        and User.objects.filter(username=username).exists()
-    ):
-        return Response(
-            {"error": "This username is already used by other user."},
-            status.HTTP_400_BAD_REQUEST
-        )
+
+    bad_response = validate_user_data_and_get_response(username, email)
+    if bad_response is not None:
+        return bad_response
+
     user = User.objects.get_or_create(
         username=username,
         email=email
@@ -197,14 +136,7 @@ def signup(request):
         'email': email
     }
 
-    email_text = f'''
-        Hello, {username}! You requested confirmation code for Yamdb.
-        Confirmation code: {confirmation_code}
-    '''
-    email_message = EmailMessage(
-        "Yamdb confirmation code", email_text, to=[email, ]
-    )
-    email_message.send()
+    send_confirmation_email(email, confirmation_code, username)
 
     return Response({"email": email, "username": username}, status.HTTP_200_OK)
 

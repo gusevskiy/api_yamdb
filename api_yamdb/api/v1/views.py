@@ -1,10 +1,14 @@
+from time import time
+from hashlib import md5
+
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
 from .utils import send_confirmation_email, validate_user_data_and_get_response
-from reviews.models import Genre, User, Title, Category, Comment
+from reviews.models import Genre, User, Title, Category, Review
 from .serializers import (
-    GenreSerializer, CategorySerializer, UserSerializer, TitleSerializer,
-    TitleSerializerGET, ReviewSerializer, CommentSerializer, UsersMeSerializer
+    GenreSerializer, CategorySerializer, UserSerializer,
+    TitleReadSerializer, ReviewSerializer, CommentSerializer,
+    UsersMeSerializer, TitleWriteSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
@@ -16,8 +20,6 @@ from .permissions import (
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status, viewsets
-from time import time
-from hashlib import md5
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
@@ -25,6 +27,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
+
 from .filtersets import TitleFilterSet
 
 
@@ -74,16 +77,15 @@ class CategoryViewSet(GetPostDeleteViewSet):
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-    serializer_class = TitleSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilterSet
     pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
-        if self.action == 'list' or self.action == 'retrieve':
-            return TitleSerializerGET
-        return TitleSerializer
+        if self.request.method == 'GET':
+            return TitleReadSerializer
+        return TitleWriteSerializer
 
 
 confirmation_codes = {}
@@ -188,23 +190,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = (AuthorAndStaffOrReadOnly, )
 
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        try:
-            review = title.reviews.get(id=self.kwargs.get('review_id'))
-        except TypeError:
-            TypeError('Нет такого отзыва')
-        queryset = review.comments.all()
-        return queryset
+        review_id = self.kwargs.get('review_id')
+        review = get_object_or_404(Review, pk=review_id)
+        review_queryset = review.comments.all()
+        return review_queryset
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        try:
-            review = title.reviews.get(id=self.kwargs.get('review_id'))
-        except TypeError:
-            TypeError('Нет такого отзыва')
+        review_id = self.kwargs.get('review_id')
+        review = get_object_or_404(Review, pk=review_id)
         serializer.save(author=self.request.user, review=review)

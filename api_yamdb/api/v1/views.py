@@ -1,8 +1,8 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
 from .utils import (
-    check_code, code_exists, generate_code, get_tokens_for_user, save_code,
-    send_confirmation_email, validate_user_data_and_get_response
+    send_confirmation_email, validate_user_data_and_get_response,
+    ConfirmationCodeManager
 )
 from reviews.models import Genre, User, Title, Category, Review
 from .serializers import (
@@ -28,6 +28,9 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .filtersets import TitleFilterSet
+
+
+confirmation_codes_manager = ConfirmationCodeManager()
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -114,8 +117,8 @@ def signup(request):
         email=email
     )[0]
     user.save()
-    confirmation_code = generate_code(username)
-    save_code(confirmation_code, username, email)
+    confirmation_code = confirmation_codes_manager.generate_code(username)
+    confirmation_codes_manager.save_code(confirmation_code, username, email)
 
     send_confirmation_email(email, confirmation_code, username)
 
@@ -136,13 +139,13 @@ def get_token(request):
     username = request.data["username"]
     confirmation_code = request.data["confirmation_code"]
 
-    if not code_exists(username):
+    if not confirmation_codes_manager.code_exists(username):
         return Response(
             {"error": "Please, request a code at /auth/signup/"},
             status.HTTP_404_NOT_FOUND
         )
-    if check_code(confirmation_code, username):
-        token_pair = get_tokens_for_user(username)
+    if confirmation_codes_manager.check_code(confirmation_code, username):
+        token_pair = confirmation_codes_manager.get_tokens_for_user(username)
         return Response({"token": token_pair['access']}, status.HTTP_200_OK)
 
     return Response(

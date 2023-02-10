@@ -1,7 +1,5 @@
 from rest_framework import serializers
 from django.utils.timezone import now
-
-from django.core.exceptions import ValidationError
 from django.core import validators
 
 from reviews.models import (

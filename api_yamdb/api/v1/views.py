@@ -108,9 +108,7 @@ def signup(request):
     email = request.data["email"]
     username = request.data["username"]
 
-    bad_response = validate_user_data_and_get_response(username, email)
-    if bad_response is not None:
-        return bad_response
+    validate_user_data_and_get_response(username, email)
 
     user = User.objects.get_or_create(
         username=username,

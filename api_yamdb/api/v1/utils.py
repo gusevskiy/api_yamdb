@@ -9,7 +9,6 @@ from hashlib import md5
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-# Раз уж захотели без глобальных переменных, вот вам ООПшный вариант
 class ConfirmationCodeManager():
     codes: list
     code_length: int

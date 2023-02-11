@@ -3,7 +3,7 @@ from django.utils.timezone import now
 from django.core import validators
 
 from reviews.models import (
-    Genre, User, Category, Title, TitleGenre, Review, Comment
+    Genre, User, Category, Title, Review, Comment
 )
 
 
@@ -105,15 +105,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         if value > current_year:
             raise serializers.ValidationError("Future year is prohibited")
         return value
-
-    def create(self, validated_data):
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(**validated_data)
-        for genre in genres:
-            current_genre = genre
-            TitleGenre.objects.create(
-                genre=current_genre, title=title)
-        return title
 
 
 class TitleReadSerializer(serializers.ModelSerializer):

@@ -1,10 +1,20 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status, viewsets
+
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.decorators import action
+from django_filters.rest_framework import DjangoFilterBackend
+
 from .utils import (
     send_confirmation_email, validate_user_data_and_get_response,
     ConfirmationCodeManager
 )
-from reviews.models import Genre, User, Title, Category, Review
+from reviews.models import Genre, User, Title, Category, Review, TitleGenre
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer,
     TitleReadSerializer, ReviewSerializer, CommentSerializer,
@@ -17,16 +27,6 @@ from .permissions import (
     AuthorOrModeratorReadOnly,
     AuthorAndStaffOrReadOnly
 )
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status, viewsets
-
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
-
 from .filtersets import TitleFilterSet
 
 
@@ -88,6 +88,25 @@ class TitleViewSet(viewsets.ModelViewSet):
         if self.request.method == 'GET':
             return TitleReadSerializer
         return TitleWriteSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        genres = validated_data.pop('genre')
+        title = Title.objects.create(**validated_data)
+        for genre in genres:
+            current_genre = genre
+            TitleGenre.objects.create(
+                genre=current_genre, title=title
+            )
+        headers = self.get_success_headers(validated_data)
+        serializer = self.get_serializer(title)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
 
 
 @api_view(['POST'])

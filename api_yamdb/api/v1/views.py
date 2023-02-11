@@ -127,7 +127,7 @@ def signup(request):
     user.save()
     send_mail(
         'Код подверждения', confirmation_code,
-        ['admin@email.com'], (email, ), fail_silently=False
+        SENDER_EMAIL, (email, ), fail_silently=False
     )
     return Response(serializer.data, status=status.HTTP_200_OK)
 

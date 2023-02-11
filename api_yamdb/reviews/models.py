@@ -25,6 +25,11 @@ class User(AbstractUser):
         blank=True
     )
     email = models.EmailField(blank=True, max_length=254)
+    confirmation_code = models.CharField(
+        'Код подтверждения',
+        max_length=100,
+        null=True
+    )
 
     @property
     def is_admin(self):

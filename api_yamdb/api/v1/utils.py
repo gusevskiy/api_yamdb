@@ -70,3 +70,8 @@ def validate_user_data_and_get_response(username, email):
 
 def exception_message_to_response(msg):
     return json.loads(msg)
+
+
+###########################################
+
+

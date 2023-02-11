@@ -121,3 +121,4 @@ REST_FRAMEWORK = {
 }
 
 SENDER_EMAIL = 'noreply@yamdb.ru'
+

@@ -1,10 +1,20 @@
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status, viewsets
+
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.filters import SearchFilter
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.decorators import action
+from django_filters.rest_framework import DjangoFilterBackend
+
 from .utils import (
-    check_code, code_exists, generate_code, get_tokens_for_user, save_code,
-    send_confirmation_email, validate_user_data_and_get_response
+    send_confirmation_email, validate_user_data_and_get_response,
+    ConfirmationCodeManager
 )
-from reviews.models import Genre, User, Title, Category, Review
+from reviews.models import Genre, User, Title, Category, Review, TitleGenre
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer,
     TitleReadSerializer, ReviewSerializer, CommentSerializer,
@@ -17,17 +27,10 @@ from .permissions import (
     AuthorOrModeratorReadOnly,
     AuthorAndStaffOrReadOnly
 )
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status, viewsets
-
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.filters import SearchFilter
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
-
 from .filtersets import TitleFilterSet
+
+
+confirmation_codes_manager = ConfirmationCodeManager()
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -86,6 +89,25 @@ class TitleViewSet(viewsets.ModelViewSet):
             return TitleReadSerializer
         return TitleWriteSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        genres = validated_data.pop('genre')
+        title = Title.objects.create(**validated_data)
+        for genre in genres:
+            current_genre = genre
+            TitleGenre.objects.create(
+                genre=current_genre, title=title
+            )
+        headers = self.get_success_headers(validated_data)
+        serializer = self.get_serializer(title)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
+
 
 @api_view(['POST'])
 def signup(request):
@@ -105,17 +127,15 @@ def signup(request):
     email = request.data["email"]
     username = request.data["username"]
 
-    bad_response = validate_user_data_and_get_response(username, email)
-    if bad_response is not None:
-        return bad_response
+    validate_user_data_and_get_response(username, email)
 
     user = User.objects.get_or_create(
         username=username,
         email=email
     )[0]
     user.save()
-    confirmation_code = generate_code(username)
-    save_code(confirmation_code, username, email)
+    confirmation_code = confirmation_codes_manager.generate_code(username)
+    confirmation_codes_manager.save_code(confirmation_code, username, email)
 
     send_confirmation_email(email, confirmation_code, username)
 
@@ -136,13 +156,13 @@ def get_token(request):
     username = request.data["username"]
     confirmation_code = request.data["confirmation_code"]
 
-    if not code_exists(username):
+    if not confirmation_codes_manager.code_exists(username):
         return Response(
             {"error": "Please, request a code at /auth/signup/"},
             status.HTTP_404_NOT_FOUND
         )
-    if check_code(confirmation_code, username):
-        token_pair = get_tokens_for_user(username)
+    if confirmation_codes_manager.check_code(confirmation_code, username):
+        token_pair = confirmation_codes_manager.get_tokens_for_user(username)
         return Response({"token": token_pair['access']}, status.HTTP_200_OK)
 
     return Response(
@@ -171,11 +191,16 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, pk=review_id)
-        review_queryset = review.comments.all()
-        return review_queryset
+        title_id = self.kwargs.get('title_id')
+        review = get_object_or_404(Review.objects.filter(
+            title_id=title_id
+        ), pk=review_id)
+        return review.comments.all()
 
     def perform_create(self, serializer):
         review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, pk=review_id)
+        title_id = self.kwargs.get('title_id')
+        review = get_object_or_404(Review.objects.filter(
+            title_id=title_id
+        ), pk=review_id)
         serializer.save(author=self.request.user, review=review)

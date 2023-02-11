@@ -24,6 +24,7 @@ class User(AbstractUser):
         max_length=256,
         blank=True
     )
+    email = models.EmailField(blank=True, max_length=254)
 
     @property
     def is_admin(self):
@@ -39,42 +40,46 @@ class User(AbstractUser):
 
 
 class Genre(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True, max_length=50)
+    name = models.CharField('Название', max_length=256)
+    slug = models.SlugField('Слаг', unique=True, max_length=50)
 
     def __str__(self):
         return self.name
 
 
 class Category(models.Model):
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(unique=True, max_length=50)
+    name = models.CharField('Название', max_length=256)
+    slug = models.SlugField('Слаг', unique=True, max_length=50)
 
     def __str__(self):
         return self.name
 
 
 class Title(models.Model):
-    name = models.CharField(max_length=256)
-    year = models.IntegerField()
-    description = models.TextField(blank=True, null=True)
-    genre = models.ManyToManyField(Genre, through='TitleGenre')
+    name = models.CharField('Название', max_length=256)
+    year = models.IntegerField('Год выхода')
+    description = models.TextField('Описание', blank=True, null=True)
+    genre = models.ManyToManyField(
+        Genre, through='TitleGenre', verbose_name='Жанр'
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.CASCADE,
         related_name='title',
-        verbose_name='category'
+        verbose_name='Категория'
     )
 
 
 class TitleGenre(models.Model):
     title = models.ForeignKey(
         Title,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        verbose_name='Произведение'
     )
     genre = models.ForeignKey(
         Genre,
         on_delete=models.CASCADE,
+        verbose_name='Жанр'
     )
 
     class Meta:

@@ -1,67 +1,45 @@
 from rest_framework import serializers
-from django.core.exceptions import ValidationError
-from django.core import validators
 from django.utils.timezone import now
+from django.core import validators
 
 from reviews.models import (
-    Genre, User, Category, Title, TitleGenre, Review, Comment
+    Genre, User, Category, Title, Review, Comment
 )
 
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField()
-    username = serializers.SlugField()
+    email = serializers.EmailField(
+        max_length=254,
+        validators=(validators.MaxLengthValidator(254),)
+    )
+    username = serializers.SlugField(
+        max_length=150,
+        validators=(
+            validators.MaxLengthValidator(150),
+            validators.RegexValidator(r'^[\w.@+-]+\Z')
+        )
+    )
 
-    def validate_email(self, value):
-        if len(value) > 254:
-            raise serializers.ValidationError(
-                {
-                    "error": "Email is too long!"
-                }
-            )
-        if User.objects.filter(email=value).exists():
-            user = User.objects.get(email=value)
-            if user.username != self.initial_data['username']:
+    def validate(self, attrs):
+        if User.objects.filter(email=attrs.get('email')).exists():
+            user = User.objects.get(email=attrs.get('email'))
+            if user.username != attrs.get('username'):
+                raise serializers.ValidationError(
+                    {
+                        "error": "Email is already used!"
+                    }
+                )
+        if User.objects.filter(username=attrs.get('username')).exists():
+            user = User.objects.get(username=attrs.get('username'))
+            if user.email != attrs.get('email'):
                 raise serializers.ValidationError(
                     {
                         "error": "Username is already used!"
                     }
                 )
-        try:
-            validators.validate_email(value)
-        except ValidationError:
-            raise serializers.ValidationError(
-                {
-                    "error": "'email' isnt email!",
-                    "email": []
-                }
-            )
-        return value
+        return super().validate(attrs)
 
     def validate_username(self, value):
-        if len(value) > 150:
-            raise serializers.ValidationError(
-                {
-                    "error": "Username is too long!"
-                }
-            )
-        if User.objects.filter(username=value).exists():
-            user = User.objects.get(username=value)
-            if user.email != self.initial_data['email']:
-                raise serializers.ValidationError(
-                    {
-                        "error": "Username is already used!"
-                    }
-                )
-        try:
-            validators.validate_slug(value)
-        except ValidationError:
-            raise serializers.ValidationError(
-                {
-                    "error": "'username' isnt slug!",
-                    "username": []
-                }
-            )
         if value == "me":
             raise serializers.ValidationError(
                 {
@@ -127,15 +105,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         if value > current_year:
             raise serializers.ValidationError("Future year is prohibited")
         return value
-
-    def create(self, validated_data):
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(**validated_data)
-        for genre in genres:
-            current_genre = genre
-            TitleGenre.objects.create(
-                genre=current_genre, title=title)
-        return title
 
 
 class TitleReadSerializer(serializers.ModelSerializer):

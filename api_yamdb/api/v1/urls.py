@@ -3,7 +3,7 @@ from django.urls import include, path
 from . import views
 from .views import (
     GenreViewSet,
-    UsersViewSet,
+    UserViewSet,
     CategoryViewSet,
     TitleViewSet,
     ReviewViewSet,
@@ -13,7 +13,7 @@ from .views import (
 app_name = 'api'
 router = DefaultRouter()
 router.register('genres', GenreViewSet, basename='genres')
-router.register('users', UsersViewSet, basename='users')
+router.register('users', UserViewSet, basename='users')
 router.register('categories', CategoryViewSet, basename='categories')
 router.register('titles', TitleViewSet, basename='titles')
 router.register(

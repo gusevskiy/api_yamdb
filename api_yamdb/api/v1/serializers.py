@@ -65,11 +65,6 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
 
-class UsersMeSerializer(UserSerializer):
-    class Meta(UserSerializer.Meta):
-        read_only_fields = ('role',)
-
-
 class GenreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Genre
@@ -150,3 +145,43 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date')
+
+
+class SignupSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=254, required=True)
+    username = serializers.CharField(max_length=150, required=True)
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError(
+                'Имя пользователя "me" не разрешено.'
+            )
+        return value
+
+    class Meta:
+        model = User
+        fields = ('username', 'email',)
+
+
+class TokenSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    confirmation_code = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'confirmation_code')
+
+
+class MeSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role'
+        )

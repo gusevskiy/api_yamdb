@@ -104,9 +104,6 @@ def check_user_is_admin_or_superuser(user):
     )
 
 
-##########################################3
-
-
 class OwnerOrAdmins(permissions.BasePermission):
 
     def has_permission(self, request, view):

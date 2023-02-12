@@ -65,11 +65,6 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
 
-class UsersMeSerializer(UserSerializer):
-    class Meta(UserSerializer.Meta):
-        read_only_fields = ('role',)
-
-
 class GenreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Genre
@@ -159,9 +154,6 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'text', 'author', 'pub_date')
-
-
-#############################################################
 
 
 class SignupSerializer(serializers.ModelSerializer):

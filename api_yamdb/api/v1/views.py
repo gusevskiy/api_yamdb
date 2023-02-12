@@ -2,44 +2,34 @@ import uuid
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
 from django.db import IntegrityError
-from django.contrib.auth.tokens import default_token_generator
-from .utils import (
-    send_confirmation_email, validate_user_data_and_get_response,
-    ConfirmationCodeManager
-)
 from reviews.models import Genre, User, Title, Category, Review
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer,
     TitleReadSerializer, ReviewSerializer, CommentSerializer,
-    UsersMeSerializer, TitleWriteSerializer, SignupSerializer,
+    TitleWriteSerializer, SignupSerializer,
     TokenSerializer, MeSerializer
 )
 from .mixins import GetPostDeleteViewSet
 from .permissions import (
     IsAdminOrReadOnly,
-    UsersEndpointPermission,
     AuthorOrModeratorReadOnly,
     AuthorAndStaffOrReadOnly,
     OwnerOrAdmins
 )
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status, viewsets, mixins
+from rest_framework import status, viewsets
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.filters import SearchFilter
 from rest_framework.decorators import action
-from rest_framework.permissions import (IsAuthenticated,
-                                        AllowAny)
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .filtersets import TitleFilterSet
 from api_yamdb.settings import SENDER_EMAIL
 from django.core.mail import send_mail
 from rest_framework_simplejwt.tokens import AccessToken
-
-
-# confirmation_codes_manager = ConfirmationCodeManager()
 
 
 class GenreViewSet(GetPostDeleteViewSet):
@@ -61,7 +51,9 @@ class UserViewSet(viewsets.ModelViewSet):
     filterset_fields = ('username')
     search_fields = ('username', )
     lookup_field = 'username'
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options', 'trace']
+    http_method_names = [
+        'get', 'post', 'patch', 'delete', 'head', 'options', 'trace'
+    ]
 
     @action(
         methods=['get', 'patch'],
@@ -104,7 +96,20 @@ class TitleViewSet(viewsets.ModelViewSet):
         return TitleWriteSerializer
 
 
-#####################################################
+def validate_user_data_and_get_response(username, email):
+    serializer = UserSerializer(data={
+        'username': username,
+        'email': email
+    })
+
+    serializer.validate_username(username)
+    serializer.validate({
+        'username': username,
+        'email': email
+    })
+    serializer.is_valid(True)
+
+
 @api_view(['POST'])
 def signup(request):
     serializer = SignupSerializer(data=request.data)
@@ -143,21 +148,6 @@ def get_token(request):
         token = str(AccessToken.for_user(user_base))
         return Response({'token': token}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class ReviewGenreModelMixin(
-#     mixins.CreateModelMixin,
-#     mixins.ListModelMixin,
-#     mixins.DestroyModelMixin,
-#     viewsets.GenericViewSet
-# ):
-#     permission_classes = [
-#         IsAuthenticatedOrReadOnly,
-#         IsAdminOrReadOnly
-#     ]
-#     filter_backends = (SearchFilter,)
-#     search_fields = ('name', 'slug')
-#     lookup_field = 'slug'
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

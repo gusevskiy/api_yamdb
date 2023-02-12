@@ -95,6 +95,25 @@ class TitleViewSet(viewsets.ModelViewSet):
             return TitleReadSerializer
         return TitleWriteSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        genres = validated_data.pop('genre')
+        title = Title.objects.create(**validated_data)
+        for genre in genres:
+            current_genre = genre
+            TitleGenre.objects.create(
+                genre=current_genre, title=title
+            )
+        headers = self.get_success_headers(validated_data)
+        serializer = self.get_serializer(title)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
+
 
 def validate_user_data_and_get_response(username, email):
     serializer = UserSerializer(data={

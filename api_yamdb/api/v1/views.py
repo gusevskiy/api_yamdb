@@ -2,7 +2,7 @@ import uuid
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
 from django.db import IntegrityError
-from reviews.models import Genre, User, Title, Category, Review
+from reviews.models import Genre, User, Title, Category, Review, TitleGenre
 from .serializers import (
     GenreSerializer, CategorySerializer, UserSerializer,
     TitleReadSerializer, ReviewSerializer, CommentSerializer,
